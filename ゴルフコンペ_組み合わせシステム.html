@@ -1,0 +1,2517 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>宮崎工業杯 コンペ管理システム</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'メイリオ',Meiryo,sans-serif;font-size:13px;background:#f0f2f5;color:#212121}
+:root{--g:#1B5E20;--g2:#2E7D32;--g3:#E8F5E9;--bl:#1565C0;--bl2:#E3F2FD;--pk:#FCE4EC;--pk2:#880E4F;--go:#FFF8E1;--bd:#BDBDBD;--or:#E65100;--pu:#6A1B9A;--gy:#607D8B}
+.hdr{background:var(--g);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 5px rgba(0,0,0,.25)}
+.hdr h1{font-size:15px;font-weight:bold}
+.event-tag{background:rgba(255,255,255,.2);padding:3px 10px;border-radius:12px;font-size:11px}
+.tabs{background:#fff;border-bottom:1px solid var(--bd);display:flex;padding:0 10px;overflow-x:auto}
+.tab{padding:9px 14px;font-size:12px;cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;color:#666;font-family:inherit;white-space:nowrap}
+.tab.on{color:var(--g2);border-bottom-color:var(--g2);font-weight:bold}
+.tab:hover:not(.on){background:#f5f5f5}
+.pnl{display:none;padding:14px;max-width:1400px;margin:0 auto}
+.pnl.on{display:block}
+.card{background:#fff;border-radius:8px;border:1px solid var(--bd);padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+/* 統計 */
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:12px}
+.stat{background:#fff;border-radius:8px;border:1px solid var(--bd);padding:10px 12px;text-align:center}
+.stat-n{font-size:20px;font-weight:bold;color:var(--g2)}
+.stat-l{font-size:10px;color:#777;margin-top:2px}
+/* ツールバー */
+.tb{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+/* ボタン */
+.btn{padding:5px 12px;border:1px solid var(--bd);border-radius:6px;background:#fff;color:#333;cursor:pointer;font-size:12px;font-family:inherit;transition:.12s}
+.btn:hover{background:#f0f0f0}
+.btn.g{background:var(--g2);color:#fff;border-color:var(--g2)}
+.btn.g:hover{background:var(--g)}
+.btn.b{background:var(--bl);color:#fff;border-color:var(--bl)}
+.btn.b:hover{opacity:.88}
+.btn.r{color:#c62828;border-color:#ef9a9a}
+.btn.r:hover{background:#ffebee}
+.btn.p{background:var(--pu);color:#fff;border-color:var(--pu)}
+.btn.or{background:var(--or);color:#fff;border-color:var(--or)}
+.btn.sm{padding:2px 8px;font-size:11px}
+/* テーブル */
+.tw{overflow:auto;border-radius:6px;border:1px solid var(--bd)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:7px 8px;background:var(--g3);color:var(--g);font-weight:bold;white-space:nowrap;cursor:pointer;user-select:none;border-bottom:2px solid #a5d6a7}
+th:hover{background:#c8e6c9}
+th.asc::after{content:" ▲";font-size:9px}
+th.desc::after{content:" ▼";font-size:9px}
+th.nd{cursor:default}
+td{padding:5px 8px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+tr:hover td{background:#fafafa}
+.fr td{background:var(--pk)!important;color:var(--pk2)}
+.fr:hover td{background:#f8d7e3!important}
+.abs td{opacity:.38}
+/* バッジ */
+.bdg{display:inline-block;font-size:10px;padding:1px 5px;border-radius:10px;font-weight:bold;white-space:nowrap}
+.bdg.f{background:#fce4ec;color:#880e4f}
+.bdg.ok{background:#e8f5e9;color:#2e7d32}
+.bdg.fi{background:#e3f2fd;color:#1565c0}
+.bdg.pa{background:#f3e5f5;color:#6a1b9a}
+.bdg.w{background:#fff3e0;color:#e65100}
+.bdg.gy{background:#eceff1;color:#546e7a}
+.bdg.pend{background:#fff3e0;color:#e65100}
+/* インフォ */
+.info{background:var(--go);border:1px solid #ffe082;border-radius:6px;padding:8px 12px;font-size:12px;color:#5d4037;margin-bottom:10px}
+.warnb{background:#fff3e0;border:1px solid #ffcc02;border-radius:6px;padding:8px 12px;font-size:12px;color:var(--or);margin-bottom:10px;display:none}
+.pastb{display:none;margin-bottom:10px;font-size:12px;color:var(--pu);background:#f3e5f5;padding:7px 12px;border-radius:6px}
+/* プログレス */
+.prog-wrap{background:#e0e0e0;border-radius:10px;height:8px;overflow:hidden;margin-top:4px}
+.prog-bar{background:var(--g2);height:100%;border-radius:10px;transition:width .5s}
+/* ドロップ */
+.dz{border:2px dashed var(--bd);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:.2s;background:#fafafa}
+.dz:hover,.dz.over{border-color:var(--g2);background:var(--g3)}
+/* モーダル */
+.mbg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal{background:#fff;border-radius:10px;padding:18px;width:480px;max-width:92vw;max-height:88vh;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.modal h3{font-size:14px;font-weight:bold;margin-bottom:12px;color:var(--g)}
+.mbtns{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.frow{margin-bottom:10px}
+.frow label{display:block;font-size:11px;color:#666;margin-bottom:3px;font-weight:bold}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;border:1px solid var(--bd);border-radius:6px;padding:5px 8px;font-size:12px;font-family:inherit;background:#fff}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--g2);box-shadow:0 0 0 2px rgba(46,125,50,.15)}
+/* 固定グループ選択 */
+.fxlist{max-height:280px;overflow-y:auto;border:1px solid var(--bd);border-radius:6px;padding:3px}
+.fxitem{display:flex;align-items:center;gap:7px;padding:4px 7px;cursor:pointer;border-radius:4px}
+.fxitem:hover{background:#f5f5f5}
+input[type=checkbox]{width:14px;height:14px;accent-color:var(--g2);cursor:pointer;flex-shrink:0}
+input[type=range]{width:100%;accent-color:var(--g2)}
+/* フォルダUI */
+.folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:8px}
+.folder-card{background:#fff;border:1px solid var(--bd);border-radius:8px;padding:12px;cursor:pointer;transition:.15s}
+.folder-card:hover{border-color:var(--g2);background:var(--g3)}
+.folder-icon{font-size:28px;margin-bottom:6px}
+.folder-name{font-weight:bold;font-size:12px;margin-bottom:3px}
+.folder-meta{font-size:10px;color:#777}
+/* フォルダ内容 */
+.folder-content{background:#fff;border:1px solid var(--bd);border-radius:8px;padding:14px;margin-top:10px}
+.folder-back{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;font-weight:bold;cursor:pointer;color:var(--g2)}
+/* ステータスチップ */
+.chip{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:bold}
+.chip.sent{background:#e8f5e9;color:#2e7d32}
+.chip.no-rep{background:#fff3e0;color:#e65100}
+.chip.ng{background:#ffebee;color:#c62828}
+.chip.pend{background:#eceff1;color:#546e7a}
+/* グループカード */
+.gg{display:grid;grid-template-columns:repeat(auto-fill,minmax(275px,1fr));gap:10px;margin-top:6px}
+.gc{background:#fff;border:1px solid var(--bd);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.ghead{background:var(--g2);color:#fff;padding:7px 11px;display:flex;align-items:center;gap:7px;font-weight:bold;font-size:12px}
+.ghead .cr{font-size:10px;opacity:.85;margin-left:auto}
+.gbdy{padding:6px}
+.mr{display:flex;align-items:center;gap:6px;padding:4px 3px;border-bottom:1px solid #f0f0f0}
+.mr:last-child{border-bottom:none}
+.mn{font-weight:bold;font-size:12px}
+.mc{font-size:10px;color:#777}
+.ms{font-size:11px;color:#555;margin-left:auto;min-width:26px;text-align:right}
+.fm{background:var(--pk)!important;border-radius:4px;padding:3px 5px}
+.atg{font-size:10px;color:#666;padding:4px 8px;background:#f5f5f5;text-align:right;border-top:1px solid #eee}
+.wc .ghead{background:#e65100}
+.ptag{font-size:9px;color:var(--pu);background:#f3e5f5;padding:1px 4px;border-radius:3px;margin-left:2px}
+/* プレビュー */
+.pvtbl{max-height:220px;overflow-y:auto;border:1px solid var(--bd);border-radius:6px;margin-top:8px}
+.pvtbl table{font-size:11px}
+.pvtbl th{position:sticky;top:0;z-index:1;cursor:default}
+/* 固定グループアイテム */
+.fxi{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--bd);border-radius:6px;margin-bottom:5px;background:#fff}
+/* 番号入力 */
+.noinp{width:48px;text-align:center;padding:2px 4px;font-size:11px;border:1px solid var(--bd);border-radius:4px}
+/* ダッシュボードカード */
+.dboard{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.db-card{background:#fff;border:1px solid var(--bd);border-radius:8px;padding:14px}
+.db-card h3{font-size:12px;color:#666;margin-bottom:8px;font-weight:bold}
+.db-num{font-size:28px;font-weight:bold;color:var(--g2)}
+.db-sub{font-size:11px;color:#888;margin-top:3px}
+/* 工程ステップ */
+.steps{display:flex;align-items:center;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+.step{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0}
+.step-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid var(--bd);background:#fff;cursor:pointer}
+.step-circle.done{background:var(--g2);border-color:var(--g2);color:#fff}
+.step-circle.active{background:var(--bl);border-color:var(--bl);color:#fff}
+.step-circle.skip{background:#f5f5f5;border-color:#ddd;color:#bbb}
+.step-lbl{font-size:9px;color:#666;text-align:center;max-width:50px;line-height:1.3}
+.step-line{width:24px;height:2px;background:var(--bd);flex-shrink:0;margin-top:-12px}
+.step-line.done{background:var(--g2)}
+/* 送信管理テーブル */
+.send-status{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:bold}
+@media(max-width:700px){
+  .stats{grid-template-columns:repeat(3,1fr)}
+  .dboard{grid-template-columns:repeat(2,1fr)}
+  .gg{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <span style="font-size:18px">⛳</span>
+  <h1>宮崎工業杯 コンペ管理システム</h1>
+  <span class="event-tag" id="event-tag">第21回 2026.4.12</span>
+  <span style="margin-left:auto;font-size:10px;opacity:.8">★=女性</span>
+</div>
+
+<div class="tabs">
+  <button class="tab on"  onclick="ST('dash',this)">📊 ダッシュボード</button>
+  <button class="tab"     onclick="ST('send',this)">📤 送信・回収管理</button>
+  <button class="tab"     onclick="ST('master',this)">👥 参加者管理</button>
+  <button class="tab"     onclick="ST('summary',this)">📋 参加者集計</button>
+  <button class="tab"     onclick="ST('fixed',this)">📌 固定グループ</button>
+  <button class="tab"     onclick="ST('result',this)">🏌️ 組み合わせ</button>
+  <button class="tab"     onclick="ST('folders',this)">📁 過去フォルダ</button>
+  <button class="tab"     onclick="ST('notice',this)">📝 案内文作成</button>
+</div>
+
+<!-- ===== ダッシュボード ===== -->
+<div id="tp-dash" class="pnl on">
+  <div class="dboard">
+    <div class="db-card">
+      <h3>📤 案内送信</h3>
+      <div class="db-num" id="db-sent">0</div>
+      <div class="db-sub">/ <span id="db-total-co">0</span> 社</div>
+      <div class="prog-wrap" style="margin-top:8px"><div class="prog-bar" id="pb-sent" style="width:0%"></div></div>
+    </div>
+    <div class="db-card">
+      <h3>✅ 回答回収</h3>
+      <div class="db-num" id="db-replied">0</div>
+      <div class="db-sub">/ <span id="db-total-co2">0</span> 社</div>
+      <div class="prog-wrap" style="margin-top:8px"><div class="prog-bar" id="pb-replied" style="width:0%"></div></div>
+    </div>
+    <div class="db-card">
+      <h3>👥 参加者確定</h3>
+      <div class="db-num" id="db-part">0</div>
+      <div class="db-sub">名（内 女性 <span id="db-fem">0</span> 名）</div>
+      <div class="prog-wrap" style="margin-top:8px"><div class="prog-bar" id="pb-part" style="width:0%"></div></div>
+    </div>
+    <div class="db-card">
+      <h3>🏆 スコア入力</h3>
+      <div class="db-num" id="db-score">0</div>
+      <div class="db-sub">/ <span id="db-part2">0</span> 名</div>
+      <div class="prog-wrap" style="margin-top:8px"><div class="prog-bar" id="pb-score" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- 工程ステップ -->
+  <div class="card">
+    <div style="font-weight:bold;font-size:13px;margin-bottom:10px">📋 コンペ準備工程</div>
+    <div class="steps" id="step-bar"></div>
+    <div id="step-detail" style="font-size:12px;color:#666;padding:8px;background:#f9f9f9;border-radius:6px"></div>
+  </div>
+
+  <!-- 最近の活動 -->
+  <div class="card">
+    <div style="font-weight:bold;font-size:13px;margin-bottom:8px">📌 組み合わせ注意点</div>
+    <div id="notes-list" style="font-size:12px"></div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:bold;font-size:13px;margin-bottom:8px">🏆 歴代優勝者</div>
+    <div class="tw" style="max-height:200px;overflow-y:auto">
+      <table><thead><tr><th class="nd">回</th><th class="nd">優勝者</th><th class="nd">グロス</th><th class="nd">会社</th><th class="nd">日付</th><th class="nd">場所</th><th class="nd">参加</th></tr></thead>
+      <tbody id="winners-body"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 送信・回収管理 ===== -->
+<div id="tp-send" class="pnl">
+  <div class="info">📤 各会社への案内送信状況と参加回答を管理します。「回答済」「欠席確認」に更新してください。</div>
+  <div class="tb">
+    <button class="btn g" onclick="openAddCo()">＋ 会社追加</button>
+    <button class="btn b" onclick="markAllSent()">全社 送信済みに</button>
+    <select id="sendFilter" style="width:120px;padding:4px 6px;font-size:11px" onchange="renderSend()">
+      <option value="">全て表示</option>
+      <option value="未送信">未送信</option>
+      <option value="送信済み">送信済み</option>
+      <option value="回答済み">回答済み（参加）</option>
+      <option value="欠席">欠席確認</option>
+    </select>
+    <span id="send-stat" style="font-size:11px;color:#666;margin-left:4px"></span>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th class="nd" style="width:50px">送信</th>
+        <th onclick="sortSend('company')" id="sth-co">会社名</th>
+        <th class="nd">FAX/連絡先</th>
+        <th onclick="sortSend('status')" id="sth-st">ステータス</th>
+        <th onclick="sortSend('count')" id="sth-cnt">参加人数</th>
+        <th class="nd">参加者名</th>
+        <th class="nd" style="width:120px">操作</th>
+      </tr></thead>
+      <tbody id="send-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== 参加者管理 ===== -->
+<div id="tp-master" class="pnl">
+  <div class="stats">
+    <div class="stat"><div class="stat-n" id="st">0</div><div class="stat-l">参加者合計</div></div>
+    <div class="stat"><div class="stat-n" id="sf">0</div><div class="stat-l">女性（★）</div></div>
+    <div class="stat"><div class="stat-n" id="sg">0</div><div class="stat-l">想定組数</div></div>
+    <div class="stat"><div class="stat-n" id="sa">0</div><div class="stat-l">平均スコア</div></div>
+    <div class="stat"><div class="stat-n" id="sc2" style="font-size:16px">0</div><div class="stat-l">会社数</div></div>
+    <div class="stat"><div class="stat-n" id="sns">0</div><div class="stat-l">スコア未入力</div></div>
+  </div>
+
+  <!-- ファイル取込み -->
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <b style="font-size:12px">📂 データ取込み</b>
+      <span style="font-size:11px;color:#666">CSV / Excel（.xlsx .xls）</span>
+      <button class="btn sm b" onclick="impCurrent()" style="margin-left:auto">② 案内送信確認からインポート</button>
+    </div>
+    <div class="dz" id="dz" ondragover="dzOv(event)" ondragleave="dzLv()" ondrop="dzDr(event)" onclick="document.getElementById('fi').click()">
+      <span style="font-size:24px">📥</span>
+      <p style="font-size:11px;color:#666;margin-top:6px;line-height:1.8">
+        <b>クリック or ドラッグ＆ドロップ</b><br>
+        【②送信確認Excel】→ 参加者を一括登録<br>
+        【順位表CSV/Excel】→ スコアを自動更新<br>
+        【組み合わせ表】→ 過去ペアを記録
+      </p>
+    </div>
+    <input type="file" id="fi" accept=".csv,.xlsx,.xls" style="display:none" multiple onchange="onFS(event)">
+  </div>
+
+  <div class="tb">
+    <input type="text" id="srch" placeholder="名前・会社で検索" style="width:180px;padding:4px 8px;font-size:12px;border:1px solid var(--bd);border-radius:6px" oninput="renderM()">
+    <select id="cFlt" style="width:140px;padding:4px 6px;font-size:11px" onchange="renderM()"><option value="">-- 会社絞込み --</option></select>
+    <button class="btn g" onclick="openAdd()">＋ 追加</button>
+    <button class="btn" onclick="togAll()">全員 参加/欠席</button>
+    <button class="btn b" onclick="autoNo()" title="参加者に現在の表示順でNo.を自動割り当てします">🔢 No.自動採番</button>
+    <label style="font-size:11px;color:#666"><input type="checkbox" id="chkA" onchange="renderM()"> 参加者のみ</label>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th class="nd" style="width:42px">参加</th>
+        <th style="width:50px" onclick="sortBy('no')" id="th-no">No.</th>
+        <th onclick="sortBy('name')" id="th-name">氏名</th>
+        <th onclick="sortBy('company')" id="th-company">会社名</th>
+        <th style="width:40px" onclick="sortBy('gender')" id="th-gender">性別</th>
+        <th style="width:68px" onclick="sortBy('score')" id="th-score">スコア</th>
+        <th onclick="sortBy('past')" id="th-past">過去同組</th>
+        <th class="nd" style="width:86px">操作</th>
+      </tr></thead>
+      <tbody id="mbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== 参加者集計 ===== -->
+<div id="tp-summary" class="pnl">
+  <div class="info">👥 参加者管理から自動生成されます。会社名・参加状況が確認できます。</div>
+  <div class="tb">
+    <button class="btn g" onclick="renderSum()">🔄 集計を更新</button>
+    <button class="btn" onclick="expSumCSV()">📥 CSV出力</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div>
+      <div class="card">
+        <b style="font-size:13px">📊 会社別参加人数</b>
+        <div class="tw" style="margin-top:8px;max-height:400px;overflow-y:auto">
+          <table><thead><tr><th class="nd">会社名</th><th class="nd">参加者</th><th class="nd">人数</th></tr></thead>
+          <tbody id="sum-body"></tbody></table>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <b style="font-size:13px">📋 参加者一覧（集計表形式）</b>
+        <div class="tw" style="margin-top:8px;max-height:400px;overflow-y:auto">
+          <table><thead><tr><th class="nd">No.</th><th class="nd">氏名</th><th class="nd">会社名</th><th class="nd">性別</th><th class="nd">スコア</th></tr></thead>
+          <tbody id="sum-list"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 固定グループ ===== -->
+<div id="tp-fixed" class="pnl">
+  <div class="info">📌 必ず同じ組にしたいグループを登録します。生成時に優先配置されます。</div>
+  <div class="tb">
+    <button class="btn g" onclick="openFix()">＋ 固定グループ追加</button>
+    <button class="btn r" onclick="clrFix()">全削除</button>
+  </div>
+  <div id="fxlist"></div>
+</div>
+
+<!-- ===== 組み合わせ ===== -->
+<div id="tp-result" class="pnl">
+  <div class="tb">
+    <button class="btn g" style="font-size:13px;padding:7px 18px" onclick="generate()">▶ 組み合わせを生成する</button>
+    <button class="btn b" onclick="generate()">🔄 再生成</button>
+    <label style="display:flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid var(--bd);border-radius:6px;cursor:pointer;background:#fff;font-size:12px;white-space:nowrap">
+      <input type="checkbox" id="chkBalance" style="accent-color:var(--g2);width:14px;height:14px;cursor:pointer">
+      📊 スコア均等化
+    </label>
+    <label style="font-size:11px;color:#666;display:flex;align-items:center;gap:5px">
+      組数 <select id="ngSel" style="width:65px;padding:3px 5px;font-size:11px">
+        <option value="auto">自動</option>
+        <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+        <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+        <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+        <option value="13">13</option><option value="14">14</option><option value="15" selected>15</option>
+      </select>
+    </label>
+    <button class="btn" onclick="expCSV()">📥 CSV出力</button>
+    <button class="btn p" onclick="saveRes()">💾 この結果を過去データに保存</button>
+    <span id="ginfo" style="font-size:11px;color:#666"></span>
+  </div>
+  <div class="warnb" id="wbox"></div>
+  <div class="pastb" id="pib"></div>
+  <div class="gg" id="gg">
+    <div class="card" style="text-align:center;color:#999;padding:32px;grid-column:1/-1">「組み合わせを生成する」ボタンを押してください</div>
+  </div>
+</div>
+
+<!-- ===== 過去フォルダ ===== -->
+<div id="tp-folders" class="pnl">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+    <b style="font-size:14px">📁 過去データ フォルダ管理</b>
+    <button class="btn g" onclick="openNewFolder()">＋ 新しいフォルダを作成</button>
+    <button class="btn b" onclick="openImportFolder()">📥 データをフォルダに取込む</button>
+  </div>
+  <div id="folder-nav" style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px"></div>
+  <div id="folder-view"></div>
+
+  <div class="card" style="margin-top:14px">
+    <b style="font-size:12px">⚙️ 重複ペナルティ設定（組み合わせ生成時）</b>
+    <p style="font-size:11px;color:#666;margin:5px 0 8px">同じペアが過去に同組だった回数 × 倍率 × 50点のペナルティ</p>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:11px;color:#666;white-space:nowrap">倍率</span>
+      <input type="range" id="psl" min="1" max="10" value="3" oninput="setPM(this.value)" style="flex:1">
+      <b id="pdis" style="color:var(--g2);min-width:18px">3</b>
+      <span style="font-size:11px;color:#666">× 50点/回</span>
+    </div>
+    <div style="margin-top:8px">
+      <b style="font-size:12px">🔥 同組回数ランキング（上位20ペア）</b>
+      <div id="prank" style="margin-top:6px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル: 参加者 -->
+<div class="mbg" id="addM" style="display:none">
+  <div class="modal">
+    <h3 id="addT">参加者を追加</h3>
+    <input type="hidden" id="fNo" value="">
+    <div class="frow"><label>氏名（女性は末尾に★）</label><input type="text" id="fNm" placeholder="例: 鈴木 花子★"></div>
+    <div class="frow"><label>会社名</label><input type="text" id="fCo"></div>
+    <div class="frow"><label>GROSSスコア</label><input type="number" id="fSc" value="100" min="60" max="200"></div>
+    <div class="frow"><label>参加状況</label>
+      <select id="fAt"><option value="1">参加</option><option value="0">欠席</option></select></div>
+    <div class="mbtns">
+      <button class="btn" onclick="cm('addM')">キャンセル</button>
+      <button class="btn g" onclick="savePl()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル: 会社追加 -->
+<div class="mbg" id="addCoM" style="display:none">
+  <div class="modal">
+    <h3>会社を追加</h3>
+    <div class="frow"><label>会社名</label><input type="text" id="coNm"></div>
+    <div class="frow"><label>FAX/連絡先</label><input type="text" id="coFax"></div>
+    <div class="frow"><label>ステータス</label>
+      <select id="coSt">
+        <option value="未送信">未送信</option>
+        <option value="送信済み">送信済み</option>
+        <option value="回答済み">回答済み（参加）</option>
+        <option value="欠席">欠席確認</option>
+      </select></div>
+    <div class="mbtns">
+      <button class="btn" onclick="cm('addCoM')">キャンセル</button>
+      <button class="btn g" onclick="saveCo()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル: 固定グループ -->
+<div class="mbg" id="fixM" style="display:none">
+  <div class="modal">
+    <h3>固定グループを追加</h3>
+    <div style="font-size:11px;color:#666;margin-bottom:6px">全参加者から選択（欠席者は薄表示）</div>
+    <input type="text" id="fxSrch" placeholder="名前・会社で絞込み" oninput="renderFxL()" style="margin-bottom:6px">
+    <div class="fxlist" id="fxsel"></div>
+    <div style="font-size:11px;color:#666;margin-top:5px">選択中: <b id="fxCnt">0</b> 人</div>
+    <div class="mbtns">
+      <button class="btn" onclick="cm('fixM')">キャンセル</button>
+      <button class="btn g" onclick="saveFix()">追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル: 取込みプレビュー -->
+<div class="mbg" id="pvM" style="display:none">
+  <div class="modal" style="width:520px">
+    <h3 id="pvT">データプレビュー</h3>
+    <div id="pvB"></div>
+    <div class="mbtns">
+      <button class="btn" onclick="cm('pvM')">キャンセル</button>
+      <button class="btn g" id="pvOk">取込む</button>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル: 新フォルダ -->
+<div class="mbg" id="newFolM" style="display:none">
+  <div class="modal">
+    <h3>新しいフォルダを作成</h3>
+    <div class="frow"><label>フォルダ名（例: 第19回 2025.4.13）</label><input type="text" id="foldNm" placeholder="第○○回 YYYY.M.D"></div>
+    <div class="frow"><label>開催日</label><input type="date" id="foldDt"></div>
+    <div class="frow"><label>会場</label><input type="text" id="foldVn" placeholder="真名カントリー倶楽部"></div>
+    <div class="mbtns">
+      <button class="btn" onclick="cm('newFolM')">キャンセル</button>
+      <button class="btn g" onclick="createFolder()">作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル: フォルダ名称変更 -->
+<div class="mbg" id="editFolM" style="display:none">
+  <div class="modal">
+    <h3>📁 フォルダを編集</h3>
+    <input type="hidden" id="editFoldId">
+    <div class="frow"><label>フォルダ名</label><input type="text" id="editFoldNm" placeholder="第○○回 YYYY.M.D"></div>
+    <div class="frow"><label>開催日</label><input type="date" id="editFoldDt"></div>
+    <div class="frow"><label>会場</label><input type="text" id="editFoldVn" placeholder="真名カントリー倶楽部"></div>
+    <div class="mbtns">
+      <button class="btn" onclick="cm('editFolM')">キャンセル</button>
+      <button class="btn g" onclick="saveEditFolder()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル: フォルダにデータ取込み -->
+<div class="mbg" id="impFolM" style="display:none">
+  <div class="modal">
+    <h3>フォルダにデータを取込む</h3>
+    <div class="frow"><label>保存先フォルダ</label>
+      <select id="impFolSel"></select></div>
+    <div class="frow"><label>データ種別</label>
+      <select id="impFolType">
+        <option value="ranking">順位表（スコア記録）</option>
+        <option value="grouping">組み合わせ表（ペア記録）</option>
+      </select></div>
+    <div class="dz" id="dz2" onclick="document.getElementById('fi2').click()" style="margin-top:8px;padding:14px">
+      <span>📥 クリックしてファイル選択</span>
+    </div>
+    <input type="file" id="fi2" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFolImp(event)">
+    <div id="impFolPrev" style="margin-top:8px"></div>
+    <div class="mbtns">
+      <button class="btn" onclick="cm('impFolM')">キャンセル</button>
+      <button class="btn g" id="impFolOk" style="display:none">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 案内文作成 ===== -->
+<div id="tp-notice" class="pnl">
+</div>
+
+<!-- モーダル: 組み合わせ結果をフォルダに保存 -->
+<div class="mbg" id="saveResM" style="display:none">
+  <div class="modal" style="width:420px">
+    <h3>🏌️ 組み合わせ結果を過去フォルダに保存</h3>
+    <div class="frow">
+      <label>セッション名（例: 第21回 2026.4.12）</label>
+      <input type="text" id="saveResLbl" placeholder="第○○回 YYYY.M.D">
+    </div>
+    <div class="frow">
+      <label>保存先フォルダ</label>
+      <select id="saveResFolSel" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid var(--bd);border-radius:6px">
+        <option value="">-- 過去フォルダを選択 --</option>
+      </select>
+    </div>
+    <div style="background:var(--g3);border-radius:6px;padding:8px 12px;font-size:11px;color:#555;margin-top:4px">
+      💡 フォルダがない場合は「過去フォルダ」タブで先に作成してください
+    </div>
+    <div class="mbtns">
+      <button class="btn" onclick="cm('saveResM')">キャンセル</button>
+      <button class="btn g" onclick="doSaveRes()">💾 保存する</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+// =============================================
+// === マスターデータ ===
+// =============================================
+let P = [
+  {id:1,no:1,name:"前沢 純也",company:"㈱アイテック",score:113,attend:1},
+  {id:2,no:2,name:"吉塲 健次",company:"㈱アイテック",score:100,attend:1},
+  {id:3,no:3,name:"荒木 牧男",company:"㈱樹工務店",score:108,attend:1},
+  {id:4,no:4,name:"稲垣 通泰",company:"ｳｨﾝｸﾞｽｲﾝﾀｰﾅｼｮﾅﾙ(協)",score:117,attend:1},
+  {id:5,no:5,name:"劉 延華",company:"ｳｨﾝｸﾞｽｲﾝﾀｰﾅｼｮﾅﾙ(協)",score:100,attend:1},
+  {id:6,no:6,name:"姜 玲★",company:"ｳｨﾝｸﾞｽｲﾝﾀｰﾅｼｮﾅﾙ(協)",score:100,attend:1},
+  {id:7,no:7,name:"川平 信二",company:"㈱川平工務店",score:104,attend:1},
+  {id:8,no:8,name:"西銘 勇人",company:"㈱川平工務店",score:98,attend:1},
+  {id:9,no:9,name:"荒川 高洋",company:"㈱ｸﾞｯﾄﾞﾘｰｽ",score:89,attend:1},
+  {id:10,no:10,name:"和田 武夫",company:"㈱ｸﾞｯﾄﾞﾘｰｽ",score:119,attend:1},
+  {id:11,no:11,name:"山口 克弘",company:"㈱ｸﾞｯﾄﾞﾘｰｽ",score:91,attend:1},
+  {id:12,no:12,name:"伊藤 勇二郎",company:"㈱さいち",score:105,attend:1},
+  {id:13,no:13,name:"前 勇太",company:"㈱さいち",score:100,attend:1},
+  {id:14,no:14,name:"下向 勝利",company:"㈲下向建工",score:104,attend:1},
+  {id:15,no:15,name:"大粒来 寿",company:"㈱大建",score:113,attend:1},
+  {id:16,no:16,name:"白砂 流星",company:"㈱大幸創建",score:90,attend:1},
+  {id:17,no:17,name:"林 涼介",company:"㈱大幸創建",score:106,attend:1},
+  {id:18,no:18,name:"大粒来 優輔",company:"㈱大心",score:126,attend:1},
+  {id:19,no:19,name:"堀江 綾★",company:"㈱大心",score:100,attend:1},
+  {id:20,no:20,name:"岸 秀光",company:"㈲ツバサ技研",score:114,attend:1},
+  {id:21,no:21,name:"野島 雄二",company:"㈲ツバサ技研",score:99,attend:1},
+  {id:22,no:22,name:"穂刈 秀司",company:"㈲ツバサ技研",score:99,attend:1},
+  {id:23,no:23,name:"上坂 さとみ★",company:"㈲翼建設",score:95,attend:1},
+  {id:24,no:24,name:"山梨 周",company:"㈱トータル都市整備",score:114,attend:1},
+  {id:25,no:25,name:"吉本 慶嗣",company:"㈱トータル都市整備",score:100,attend:1},
+  {id:26,no:26,name:"長島 時孝",company:"㈱長島建設",score:102,attend:1},
+  {id:27,no:27,name:"堀本 尚亨",company:"㈱長島建設",score:122,attend:1},
+  {id:28,no:28,name:"野澤 公一",company:"㈱ビップ",score:114,attend:1},
+  {id:29,no:29,name:"本多 信雄",company:"㈱ビップ",score:90,attend:1},
+  {id:30,no:30,name:"大島 義人",company:"㈱ビップ",score:109,attend:1},
+  {id:31,no:31,name:"安藤 武雄",company:"ヒロマテリアル",score:100,attend:1},
+  {id:32,no:32,name:"須貝 浩道",company:"ヒロマテリアル",score:106,attend:1},
+  {id:33,no:33,name:"藤木 章敬",company:"藤木工務店",score:97,attend:1},
+  {id:34,no:34,name:"藤木 優充",company:"藤木工務店",score:100,attend:1},
+  {id:35,no:35,name:"藤江 正光",company:"㈱フジックス",score:100,attend:1},
+  {id:36,no:36,name:"新藤 友巳",company:"㈱フジックス",score:113,attend:1},
+  {id:37,no:37,name:"藤江 千香子★",company:"㈱フジックス",score:104,attend:1},
+  {id:38,no:38,name:"佐々木 与昌",company:"㈲丸与工業",score:92,attend:1},
+  {id:39,no:39,name:"扇田 武彦",company:"絆・道",score:95,attend:1},
+  {id:40,no:40,name:"鈴木 真史",company:"㈲ＬＥＥテックス",score:117,attend:1},
+  {id:41,no:41,name:"原 広明",company:"㈲ＬＥＥテックス",score:113,attend:1},
+  {id:42,no:42,name:"佐原 和美★",company:"㈲ＬＥＥテックス",score:93,attend:1},
+  {id:43,no:43,name:"鈴木 江利美★",company:"㈲ＬＥＥテックス",score:115,attend:1},
+  {id:44,no:44,name:"倉賀野 哲也",company:"㈱ワールド通商",score:103,attend:1},
+  {id:45,no:45,name:"林 将",company:"平岩建設㈱",score:88,attend:1},
+  {id:46,no:46,name:"関 裕一",company:"㈱奥村組",score:107,attend:1},
+  {id:47,no:47,name:"大友 貴裕",company:"㈱奥村組",score:100,attend:1},
+  {id:48,no:48,name:"下間山 善彦",company:"㈱奥村組",score:100,attend:1},
+  {id:49,no:49,name:"吉田 祐輝",company:"㈱奥村組",score:100,attend:1},
+  {id:50,no:50,name:"新居 憲作",company:"㈱奥村組",score:100,attend:1},
+  {id:51,no:51,name:"森 誠",company:"㈱奥村組",score:100,attend:1},
+  {id:52,no:52,name:"北村 健一郎",company:"野村建設工業㈱",score:100,attend:1},
+  {id:53,no:53,name:"木村 文紀",company:"野村建設工業㈱",score:100,attend:1},
+  {id:54,no:54,name:"大粒来 彰",company:"㈱宮崎工業",score:101,attend:1},
+  {id:55,no:55,name:"野中 利昭",company:"㈱宮崎工業",score:102,attend:1},
+  {id:56,no:56,name:"小岩 雄飛",company:"㈱宮崎工業",score:133,attend:1},
+  {id:57,no:57,name:"髙橋 身奈★",company:"㈱宮崎工業",score:115,attend:1},
+  {id:58,no:58,name:"大粒来 義勝",company:"㈱宮崎工業",score:115,attend:1},
+];
+let nid=59, eid=null;
+
+// 送信管理データ
+let CO = [
+  {id:1,company:"㈱アイテック",fax:"メール",status:"回答済み"},
+  {id:2,company:"㈱樹工務店",fax:"登録",status:"回答済み"},
+  {id:3,company:"ｳｨﾝｸﾞｽｲﾝﾀｰﾅｼｮﾅﾙ(協)",fax:"登録",status:"回答済み"},
+  {id:4,company:"WEBデザインZOOK",fax:"メール",status:"欠席"},
+  {id:5,company:"(株)ウラタ",fax:"高橋連絡(ﾒｰﾙ)",status:"欠席"},
+  {id:6,company:"㈱川平工務店",fax:"登録",status:"回答済み"},
+  {id:7,company:"㈱ｸﾞｯﾄﾞﾘｰｽ",fax:"登録",status:"回答済み"},
+  {id:8,company:"倉商㈱",fax:"松野確認",status:"送信済み"},
+  {id:9,company:"三基型枠工業㈱",fax:"登録",status:"送信済み"},
+  {id:10,company:"㈱さいち",fax:"登録",status:"回答済み"},
+  {id:11,company:"㈲下向建工",fax:"登録",status:"回答済み"},
+  {id:12,company:"㈱住田工務店",fax:"049-239-3221",status:"欠席"},
+  {id:13,company:"㈲大貴",fax:"登録",status:"欠席"},
+  {id:14,company:"㈱大建",fax:"登録",status:"回答済み"},
+  {id:15,company:"㈱大恵実業",fax:"登録",status:"欠席"},
+  {id:16,company:"㈱大幸創建",fax:"登録",status:"回答済み"},
+  {id:17,company:"㈱大心",fax:"優輔直接LINE",status:"回答済み"},
+  {id:18,company:"田中企画",fax:"047-424-3430",status:"送信済み"},
+  {id:19,company:"土屋興業",fax:"登録",status:"送信済み"},
+  {id:20,company:"㈲ツバサ技研",fax:"047-410-9778",status:"回答済み"},
+  {id:21,company:"㈲翼建設",fax:"043-424-2110",status:"回答済み"},
+  {id:22,company:"㈱トータル都市整備",fax:"03-3276-3931",status:"回答済み"},
+  {id:23,company:"㈱長島建設",fax:"登録",status:"回答済み"},
+  {id:24,company:"日建リース工業㈱",fax:"メール",status:"欠席"},
+  {id:25,company:"㈱ビップ",fax:"登録＆野澤メール",status:"回答済み"},
+  {id:26,company:"ヒロマテリアル",fax:"登録",status:"回答済み"},
+  {id:27,company:"藤木工務店",fax:"登録",status:"回答済み"},
+  {id:28,company:"㈱フジックス",fax:"登録",status:"回答済み"},
+  {id:29,company:"㈱ﾍﾞﾙｺｰﾎﾟﾚｰｼｮﾝ",fax:"0475-47-2753",status:"送信済み"},
+  {id:30,company:"㈲丸与工業",fax:"042-534-0075",status:"回答済み"},
+  {id:31,company:"絆・道",fax:"ライン",status:"回答済み"},
+  {id:32,company:"リゾートトラスト㈱",fax:"045-477-5794",status:"送信済み"},
+  {id:33,company:"㈲ＬＥＥテックス",fax:"0438-97-5112",status:"回答済み"},
+  {id:34,company:"㈱ワールド通商",fax:"メール",status:"回答済み"},
+  {id:35,company:"平岩建設㈱",fax:"？",status:"回答済み"},
+  {id:36,company:"㈱奥村組",fax:"社長確認",status:"回答済み"},
+  {id:37,company:"㈱錢高組",fax:"保留",status:"未送信"},
+  {id:38,company:"野村建設工業㈱",fax:"野中確認",status:"回答済み"},
+  {id:39,company:"㈱宮崎工業",fax:"",status:"回答済み"},
+];
+let coid=40, ecoid=null;
+let sendSortCol='company', sendSortDir=1;
+
+// 固定グループ
+let FX = [
+  {id:1,label:"LEEテックス4人同じ組",ids:[40,41,42,43]},
+  {id:2,label:"関・新居・姜玲 同じ組",ids:[46,50,6]},
+];
+let fgid=3;
+
+// 組み合わせ結果
+let GR = [];
+
+// ペナルティ
+let PM = 3;
+let PH = {}; // pairHist: "normA___normB" -> count
+
+// フォルダ（過去データ）
+let FOLDERS = [
+  {id:"f19",name:"第19回 2025.4.13",date:"2025-04-13",venue:"真名カントリー倶楽部GPC",files:[
+    {type:"ranking",label:"第19回 順位表",data:[
+      {name:"大粒来 寿",score:113},{name:"藤江 千香子",score:104},{name:"宮崎 浩治",score:97},
+      {name:"藤木 章敬",score:97},{name:"長島 時孝",score:102},{name:"白砂 流星",score:90},
+      {name:"上坂 さとみ",score:95},{name:"加藤 英夫",score:118},{name:"堀江 綾",score:100},
+      {name:"扇田 武彦",score:98},{name:"倉賀野 哲也",score:103},{name:"山口 克弘",score:91},
+      {name:"本多 信雄",score:90},{name:"荒川 高洋",score:89},{name:"藤木 優充",score:100},
+      {name:"杉野 桂介",score:105},{name:"野島 雄二",score:99},{name:"野中 利昭",score:102},
+      {name:"関 裕一",score:107},{name:"林 将",score:88},{name:"伊藤 勇二郎",score:105},
+      {name:"西銘 勇人",score:98},{name:"荒牧 武男",score:109},{name:"上坂 登織",score:90},
+      {name:"荒木 牧男",score:108},{name:"和田 武夫",score:119},{name:"佐原 和美",score:93},
+      {name:"穂刈 秀司",score:99},{name:"佐々木 与昌",score:92},{name:"下向 勝利",score:104},
+      {name:"大島 義人",score:109},{name:"山梨 周",score:114},{name:"新藤 友己",score:113},
+      {name:"林 涼介",score:106},{name:"堀本 尚亨",score:122},{name:"鈴木 江利美",score:115},
+      {name:"藤木 政晴",score:109},{name:"岸 秀光",score:114},{name:"大粒来 彰",score:101},
+      {name:"稲垣 通泰",score:117},{name:"川平 信二",score:104},{name:"小岩 雄飛",score:133},
+      {name:"前沢 純也",score:113},{name:"粒来 聡",score:110},{name:"野澤 公一",score:114},
+      {name:"大粒来 優輔",score:126},{name:"増田 愛",score:125},{name:"原 広明",score:113},
+      {name:"柳澤 紀行",score:115},{name:"山内 祐太",score:118},{name:"鈴木 真史",score:117},
+      {name:"召 辰",score:197}
+    ]}
+  ]},
+  {id:"f18",name:"第18回 2024.10.13",date:"2024-10-13",venue:"CPGカントリークラブ",files:[]},
+  {id:"f17",name:"第17回 2024.4.14",date:"2024-04-14",venue:"BRISTOL HILL GOLF CLUB",files:[
+    {type:"ranking",label:"第17回 順位表",data:[
+      {name:"林 涼介",score:94},{name:"荒井 咲良",score:93},{name:"上坂 登織",score:87},
+      {name:"板倉 洋介",score:97},{name:"原 広明",score:108},{name:"藤木 章敬",score:95},
+      {name:"大粒来 彰",score:94},{name:"安藤 武雄",score:100},{name:"上坂 さとみ",score:99},
+      {name:"藤江 正光",score:99},{name:"大粒来 寿",score:104}
+    ]}
+  ]},
+];
+let currentFolderId = null;
+
+// 歴代優勝者
+const WINNERS = [
+  {round:"第-1回",name:"山内 卓三",score:95,company:"MJウッド",date:"2014.5.25",venue:"ヌーヴェルゴルフ俱楽部",count:38},
+  {round:"第0回",name:"川平 信二",score:111,company:"川平工務店",date:"2015.6.14",venue:"東京国際空港ゴルフ倶楽部",count:32},
+  {round:"第2回",name:"久保田 雅彦",score:96,company:"テクネット",date:"2015.11.8",venue:"ヌーヴェルゴルフ俱楽部",count:31},
+  {round:"第3回",name:"滝田 聖二",score:92,company:"三基型枠工業",date:"2016.4.24",venue:"ヌーヴェルゴルフ俱楽部",count:38},
+  {round:"第4回",name:"田中 聡浩",score:97,company:"フジックス",date:"2016.10.30",venue:"南総カントリークラブ",count:49},
+  {round:"第5回",name:"伊藤 智樹",score:86,company:"樹工務店",date:"2017.4.2",venue:"ヌーヴェルゴルフ俱楽部",count:52},
+  {round:"第6回",name:"実重 成則",score:90,company:"ニチラス",date:"2017.10.8",venue:"ヌーヴェルゴルフ俱楽部",count:44},
+  {round:"第7回",name:"川平 信二",score:96,company:"川平工務店",date:"2018.4.15",venue:"ヌーヴェルゴルフ俱楽部",count:60},
+  {round:"第8回",name:"荒川 高洋",score:95,company:"グッドリース",date:"2018.10.7",venue:"南総カントリークラブ",count:59},
+  {round:"第9回",name:"高部 静雄",score:98,company:"高部工務所",date:"2019.4.14",venue:"ヌーヴェルゴルフ俱楽部",count:59},
+  {round:"第10回",name:"山口 克弘",score:100,company:"日建リース",date:"2020.10.11",venue:"ヌーヴェルゴルフ俱楽部",count:49},
+  {round:"第11回",name:"東司 和也",score:99,company:"リゾートトラスト",date:"2021.4.25",venue:"ヌーヴェルゴルフ俱楽部",count:49},
+  {round:"第12回",name:"柳澤 紀行",score:107,company:"大恵実業",date:"2022.10.10",venue:"ヌーヴェルゴルフ俱楽部",count:63},
+  {round:"第13回",name:"本多 信雄",score:87,company:"ビクトリー",date:"2022.4.10",venue:"ヌーヴェルゴルフ俱楽部",count:64},
+  {round:"第14回",name:"関 裕一",score:93,company:"奥村組",date:"2022.11.6",venue:"ヌーヴェルゴルフ俱楽部",count:64},
+  {round:"第15回",name:"本多 信雄",score:76,company:"ビクトリー",date:"2023.4.30",venue:"ヌーヴェルゴルフ俱楽部",count:63},
+  {round:"第16回",name:"佐々木 与昌",score:91,company:"丸予工業",date:"2023.10.8",venue:"CPGカントリークラブ",count:61},
+  {round:"第17回",name:"林 涼介",score:94,company:"大幸創建",date:"2024.4.14",venue:"BRISTOL HILL GOLF CLUB",count:64},
+  {round:"第18回",name:"藤木 章敬",score:96,company:"藤木工務店",date:"2024.10.13",venue:"CPGカントリークラブ",count:60},
+  {round:"第19回",name:"大粒来 寿",score:113,company:"大建",date:"2025.4.13",venue:"真名カントリー倶楽部GPC",count:52},
+  {round:"第20回",name:"堀江 綾",score:89,company:"大心",date:"2025.10.12",venue:"真名カントリー倶楽部GPC",count:63},
+  {round:"第21回（予定）",name:"",score:"",company:"",date:"2026.4.12",venue:"真名カントリー倶楽部MC",count:""},
+];
+
+// 第19回のペア履歴を初期設定（過去1回分）
+let SESSIONS = [
+  {id:"s19",date:"2025-04-13",label:"第19回 2025.4.13",folderId:"f19",groups:[]}
+];
+
+const COURSES=[
+  ["つつじ","08:44"],["つつじ","08:52"],["つつじ","09:00"],["つつじ","09:08"],
+  ["つつじ","09:16"],["つつじ","09:24"],["つつじ","09:32"],["つつじ","09:40"],
+  ["くすの木","08:44"],["くすの木","08:52"],["くすの木","09:00"],["くすの木","09:08"],
+  ["くすの木","09:16"],["くすの木","09:24"],["くすの木","09:32"],
+];
+
+const isF=n=>n.includes('★');
+const norm=s=>s.replace(/[\s　★]/g,'');
+const pk=(a,b)=>{const na=norm(a),nb=norm(b);return na<nb?`${na}___${nb}`:`${nb}___${na}`};
+const getPP=(a,b)=>(PH[pk(a,b)]||0)*PM*50;
+let sortCol='no', sortDir=1;
+
+// =============================================
+// === localStorage ===
+// =============================================
+function sv(){
+  try{
+    localStorage.setItem('gP',JSON.stringify(P));
+    localStorage.setItem('gCO',JSON.stringify(CO));
+    localStorage.setItem('gFX',JSON.stringify(FX));
+    localStorage.setItem('gPH',JSON.stringify(PH));
+    localStorage.setItem('gSS',JSON.stringify(SESSIONS));
+    localStorage.setItem('gFO',JSON.stringify(FOLDERS));
+    localStorage.setItem('gPM',PM);
+    localStorage.setItem('gFgid',fgid);
+    localStorage.setItem('gCoid',coid);
+  }catch(e){}
+}
+function ld(){
+  try{
+    const pl=localStorage.getItem('gP');if(pl){P=JSON.parse(pl);nid=Math.max(...P.map(x=>x.id),nid-1)+1;}
+    const co=localStorage.getItem('gCO');if(co){CO=JSON.parse(co);coid=Math.max(...CO.map(x=>x.id),coid-1)+1;}
+    const fx=localStorage.getItem('gFX');if(fx){FX=JSON.parse(fx);fgid=parseInt(localStorage.getItem('gFgid')||fgid);}
+    const ph=localStorage.getItem('gPH');if(ph)PH=JSON.parse(ph);
+    const ss=localStorage.getItem('gSS');if(ss)SESSIONS=JSON.parse(ss);
+    const fo=localStorage.getItem('gFO');if(fo)FOLDERS=JSON.parse(fo);
+    const pm_=localStorage.getItem('gPM');if(pm_){PM=parseInt(pm_);document.getElementById('psl').value=PM;document.getElementById('pdis').textContent=PM;}
+  }catch(e){}
+}
+
+// =============================================
+// === タブ ===
+// =============================================
+function ST(t,el){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.pnl').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('tp-'+t).classList.add('on');
+  if(t==='dash')renderDash();
+  if(t==='send'){updateCoFilter();renderSend();}
+  if(t==='master'){updateCoFilterM();renderM();}
+  if(t==='summary')renderSum();
+  if(t==='fixed')renderFxList2();
+  if(t==='folders')renderFolders();
+  if(t==='notice')renderNotice();
+}
+
+// =============================================
+// === ダッシュボード ===
+// =============================================
+function renderDash(){
+  const totalCo=CO.length;
+  const sent=CO.filter(c=>c.status!=='未送信').length;
+  const replied=CO.filter(c=>c.status==='回答済み'||c.status==='欠席').length;
+  const ac=P.filter(p=>p.attend);
+  const withScore=ac.filter(p=>p.score&&p.score!==100).length;
+
+  document.getElementById('db-sent').textContent=sent;
+  document.getElementById('db-total-co').textContent=totalCo;
+  document.getElementById('db-replied').textContent=replied;
+  document.getElementById('db-total-co2').textContent=totalCo;
+  document.getElementById('db-part').textContent=ac.length;
+  document.getElementById('db-fem').textContent=ac.filter(p=>isF(p.name)).length;
+  document.getElementById('db-score').textContent=withScore;
+  document.getElementById('db-part2').textContent=ac.length;
+
+  const pct=n=>totalCo>0?Math.round(n/totalCo*100):0;
+  document.getElementById('pb-sent').style.width=pct(sent)+'%';
+  document.getElementById('pb-replied').style.width=pct(replied)+'%';
+  document.getElementById('pb-part').style.width=(ac.length?Math.min(100,Math.round(ac.length/60*100)):0)+'%';
+  document.getElementById('pb-score').style.width=(ac.length?Math.round(withScore/ac.length*100):0)+'%';
+
+  // ステップ
+  const steps=[
+    {icon:'📝',lbl:'案内文\n作成',done:true},
+    {icon:'📤',lbl:'案内送信',done:sent>=totalCo*0.8},
+    {icon:'✅',lbl:'回答\n回収',done:replied>=totalCo*0.7},
+    {icon:'👥',lbl:'参加者\n登録',done:ac.length>40},
+    {icon:'🏆',lbl:'スコア\n入力',done:withScore>ac.length*0.8},
+    {icon:'🏌️',lbl:'組み合わせ\n生成',done:false},
+  ];
+  const sb=document.getElementById('step-bar');
+  sb.innerHTML=steps.map((s,i)=>`
+    ${i>0?`<div class="step-line ${steps[i-1].done?'done':''}"></div>`:''}
+    <div class="step">
+      <div class="step-circle ${s.done?'done':i===steps.findIndex(x=>!x.done)?'active':''}">${s.icon}</div>
+      <div class="step-lbl">${s.lbl}</div>
+    </div>`).join('');
+
+  const activeStep=steps.findIndex(s=>!s.done);
+  const labels=['案内文の作成','案内送信（全社へFAX/メール）','参加回答の回収','参加者の確定登録','スコアの入力','組み合わせの生成'];
+  document.getElementById('step-detail').textContent=activeStep>=0?`次のステップ: ${labels[activeStep]}`:'✅ 全ステップ完了';
+
+  // 注意点
+  document.getElementById('notes-list').innerHTML=`
+    <div style="margin-bottom:4px">① LEEテックス4人（鈴木真史・原広明・佐原和美★・鈴木江利美★）は同じ組</div>
+    <div>② 関裕一・新居憲作・姜玲★ は同じ組</div>`;
+
+  // 歴代優勝者
+  document.getElementById('winners-body').innerHTML=[...WINNERS].reverse().slice(0,8).map(w=>`
+    <tr><td>${w.round}</td><td><b>${w.name}</b></td><td>${w.score||''}</td><td style="font-size:11px;color:#666">${w.company}</td><td style="font-size:11px;color:#666">${w.date}</td><td style="font-size:11px;color:#777">${w.venue}</td><td>${w.count||''}</td></tr>`).join('');
+}
+
+// =============================================
+// === 送信管理 ===
+// =============================================
+function updateCoFilter(){
+  // フィルタは sendFilter セレクト
+}
+function renderSend(){
+  const flt=document.getElementById('sendFilter').value;
+  let list=[...CO];
+  if(flt) list=list.filter(c=>c.status===flt);
+  list.sort((a,b)=>{
+    let va,vb;
+    if(sendSortCol==='company'){va=a.company;vb=b.company;}
+    else if(sendSortCol==='status'){va=a.status;vb=b.status;}
+    else if(sendSortCol==='count'){va=getPCount(a.company);vb=getPCount(b.company);}
+    else{va=a.company;vb=b.company;}
+    return va<vb?-sendSortDir:va>vb?sendSortDir:0;
+  });
+
+  const statusColor={
+    '未送信':'color:#546e7a;background:#eceff1',
+    '送信済み':'color:#e65100;background:#fff3e0',
+    '回答済み':'color:#2e7d32;background:#e8f5e9',
+    '欠席':'color:#c62828;background:#ffebee',
+  };
+  document.getElementById('send-body').innerHTML=list.map(c=>{
+    const parts=P.filter(p=>p.attend&&p.company===c.company);
+    const sc=statusColor[c.status]||'';
+    return`<tr>
+      <td><input type="checkbox" ${c.status!=='未送信'?'checked':''} onchange="togSent(${c.id},this.checked)"></td>
+      <td><b>${c.company}</b></td>
+      <td style="font-size:11px;color:#666">${c.fax}</td>
+      <td><span class="bdg" style="${sc}">${c.status}</span></td>
+      <td><b>${parts.length}</b>名</td>
+      <td style="font-size:11px;color:#555">${parts.map(p=>p.name+(isF(p.name)?'':'')+(p.score&&p.score!==100?' ('+p.score+')':'')).join('、')||'—'}</td>
+      <td>
+        <select style="font-size:10px;padding:2px 4px;width:90px;border:1px solid var(--bd);border-radius:4px" onchange="updCoStatus(${c.id},this.value)">
+          ${['未送信','送信済み','回答済み','欠席'].map(s=>`<option value="${s}"${s===c.status?' selected':''}>${s}</option>`).join('')}
+        </select>
+        <button class="btn sm r" onclick="delCo(${c.id})" style="margin-left:3px">削除</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const total=CO.length,sent=CO.filter(c=>c.status!=='未送信').length,rep=CO.filter(c=>c.status==='回答済み').length,abs=CO.filter(c=>c.status==='欠席').length;
+  document.getElementById('send-stat').textContent=`全${total}社 | 送信済み:${sent} | 参加:${rep} | 欠席:${abs} | 未回答:${total-rep-abs}`;
+}
+function getPCount(co){return P.filter(p=>p.attend&&p.company===co).length;}
+function togSent(id,v){const c=CO.find(x=>x.id===id);if(c)c.status=v?'送信済み':'未送信';renderSend();sv();}
+function updCoStatus(id,v){const c=CO.find(x=>x.id===id);if(c)c.status=v;renderSend();sv();}
+function delCo(id){if(!confirm('削除しますか？'))return;CO=CO.filter(x=>x.id!==id);renderSend();sv();}
+function markAllSent(){CO.forEach(c=>{if(c.status==='未送信')c.status='送信済み';});renderSend();sv();}
+function sortSend(col){
+  if(sendSortCol===col)sendSortDir*=-1;else{sendSortCol=col;sendSortDir=1;}
+  renderSend();
+}
+function openAddCo(){
+  ecoid=null;
+  ['coNm','coFax'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('coSt').value='未送信';
+  document.getElementById('addCoM').style.display='flex';
+}
+function saveCo(){
+  const nm=document.getElementById('coNm').value.trim();
+  if(!nm){alert('会社名を入力してください');return;}
+  const d={company:nm,fax:document.getElementById('coFax').value.trim(),status:document.getElementById('coSt').value};
+  if(ecoid)Object.assign(CO.find(x=>x.id===ecoid),d);
+  else CO.push({id:coid++,...d});
+  cm('addCoM');renderSend();sv();
+}
+
+// =============================================
+// === 参加者マスタ ===
+// =============================================
+function updateCoFilterM(){
+  const sel=document.getElementById('cFlt');
+  const cur=sel.value;
+  const cos=[...new Set(P.map(p=>p.company))].sort();
+  sel.innerHTML='<option value="">-- 会社絞込み --</option>'+cos.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+}
+function updStats(){
+  const ac=P.filter(p=>p.attend);
+  document.getElementById('st').textContent=ac.length;
+  document.getElementById('sf').textContent=ac.filter(p=>isF(p.name)).length;
+  document.getElementById('sg').textContent=Math.min(15,Math.ceil(ac.length/4));
+  document.getElementById('sa').textContent=ac.length?Math.round(ac.reduce((a,p)=>a+p.score,0)/ac.length):0;
+  document.getElementById('sc2').textContent=[...new Set(ac.map(p=>p.company))].length;
+  document.getElementById('sns').textContent=ac.filter(p=>!p.score||p.score===100).length;
+}
+function pastCnt(name){
+  const nm=norm(name);
+  return Object.entries(PH).filter(([k])=>k.startsWith(nm+'___')||k.endsWith('___'+nm)).reduce((s,[,v])=>s+v,0);
+}
+function getSort(a,b){
+  let va,vb;
+  if(sortCol==='no'){va=a.no||9999;vb=b.no||9999;}
+  else if(sortCol==='name'){va=norm(a.name);vb=norm(b.name);}
+  else if(sortCol==='company'){va=a.company;vb=b.company;}
+  else if(sortCol==='gender'){va=isF(a.name)?0:1;vb=isF(b.name)?0:1;}
+  else if(sortCol==='score'){va=a.score;vb=b.score;}
+  else if(sortCol==='past'){va=pastCnt(a.name);vb=pastCnt(b.name);}
+  else return 0;
+  return va<vb?-sortDir:va>vb?sortDir:0;
+}
+function sortBy(col){
+  if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=1;}
+  document.querySelectorAll('th[id^="th-"]').forEach(t=>t.className='');
+  const th=document.getElementById('th-'+col);
+  if(th)th.className=sortDir===1?'asc':'desc';
+  renderM();
+}
+function renderM(){
+  updStats();
+  const q=(document.getElementById('srch').value||'').replace(/[\s　]/g,'').toLowerCase();
+  const cf=document.getElementById('cFlt').value;
+  const oa=document.getElementById('chkA').checked;
+  const list=[...P].filter(p=>{
+    if(oa&&!p.attend)return false;
+    if(cf&&p.company!==cf)return false;
+    if(!q)return true;
+    return norm(p.name).toLowerCase().includes(q)||p.company.toLowerCase().includes(q);
+  }).sort(getSort);
+  document.getElementById('mbody').innerHTML=list.map(p=>{
+    const f=isF(p.name),pc=pastCnt(p.name);
+    const noScore=!p.score||p.score===100;
+    return`<tr class="${f&&p.attend?'fr':''} ${!p.attend?'abs':''}">
+      <td><input type="checkbox" ${p.attend?'checked':''} onchange="togAtt(${p.id},this.checked)"></td>
+      <td style="text-align:center;font-weight:bold;font-size:13px;color:${p.no?'var(--g2)':' #ccc'}">${p.no||'—'}</td>
+      <td><b>${p.name}</b>${f?' <span class="bdg f">★</span>':''}</td>
+      <td style="color:#666;font-size:11px">${p.company}</td>
+      <td>${f?'女':'男'}</td>
+      <td><input type="number" value="${p.score||''}" min="60" max="200" style="width:60px;padding:2px 4px;font-size:11px;border:1px solid ${noScore?'#ffcc02':p.score>130?'#ef9a9a':'var(--bd)'};border-radius:4px" onchange="updSc(${p.id},this.value)"></td>
+      <td>${pc>0?`<span class="bdg pa">同組${pc}回</span>`:'<span style="color:#ccc;font-size:10px">なし</span>'}</td>
+      <td><button class="btn sm" onclick="editP(${p.id})">編集</button> <button class="btn sm r" onclick="delP(${p.id})">削除</button></td>
+    </tr>`;
+  }).join('');
+}
+function togAtt(id,v){
+  P.find(p=>p.id===id).attend=v?1:0;
+  syncToSend(id);
+  const sorted=[...P].filter(p=>p.attend).sort(getSort);
+  sorted.forEach((p,i)=>{p.no=i+1;});
+  P.filter(p=>!p.attend).forEach(p=>{p.no=null;});
+  renderM();sv();
+}
+function syncToSend(pid){
+  const p=P.find(x=>x.id===pid);if(!p)return;
+  const co=CO.find(c=>c.company===p.company);
+  if(co&&co.status==='回答済み'&&!P.filter(x=>x.attend&&x.company===p.company).length){
+    co.status='欠席';
+  }
+}
+function updNo(id,v){P.find(p=>p.id===id).no=v?parseInt(v):null;sv();}
+function autoNo(){
+  const sorted=[...P].filter(p=>p.attend).sort(getSort);
+  sorted.forEach((p,i)=>{p.no=i+1;});
+  P.filter(p=>!p.attend).forEach(p=>{p.no=null;});
+  renderM();sv();
+  alert('No.を割り当てました（'+sorted.length+'名）');
+}
+function updSc(id,v){P.find(p=>p.id===id).score=parseInt(v)||100;sv();}
+function togAll(){const n=P.filter(p=>p.attend).length;P.forEach(p=>p.attend=n<P.length?1:0);renderM();sv();}
+function openAdd(){
+  eid=null;
+  document.getElementById('addT').textContent='参加者を追加';
+  ['fNo','fNm','fCo'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('fSc').value='100';
+  document.getElementById('fAt').value=1;
+  document.getElementById('addM').style.display='flex';
+  setTimeout(()=>document.getElementById('fNm').focus(),50);
+}
+function editP(id){
+  const p=P.find(x=>x.id===id);eid=id;
+  document.getElementById('addT').textContent='参加者を編集';
+  document.getElementById('fNo').value=p.no||'';
+  document.getElementById('fNm').value=p.name;
+  document.getElementById('fCo').value=p.company;
+  document.getElementById('fSc').value=p.score||'';
+  document.getElementById('fAt').value=p.attend;
+  document.getElementById('addM').style.display='flex';
+}
+function savePl(){
+  const name=document.getElementById('fNm').value.trim();
+  if(!name){alert('氏名を入力してください');return;}
+  const d={name,company:document.getElementById('fCo').value.trim(),score:parseInt(document.getElementById('fSc').value)||100,attend:parseInt(document.getElementById('fAt').value),no:parseInt(document.getElementById('fNo').value)||null};
+  if(eid)Object.assign(P.find(p=>p.id===eid),d);
+  else P.push({id:nid++,...d});
+  cm('addM');updateCoFilterM();
+  const _sorted=[...P].filter(p=>p.attend).sort(getSort);
+  _sorted.forEach((p,i)=>{p.no=i+1;});
+  P.filter(p=>!p.attend).forEach(p=>{p.no=null;});
+  renderM();sv();
+}
+function delP(id){if(!confirm('削除しますか？'))return;P=P.filter(p=>p.id!==id);FX.forEach(f=>f.ids=f.ids.filter(i=>i!==id));updateCoFilterM();renderM();sv();}
+function cm(id){document.getElementById(id).style.display='none';}
+
+// ② 案内送信確認からインポート
+function impCurrent(){
+  alert('②R8_04_12_案内送信確認途中集計.xlsx をドロップしてください。\n「参加者管理」タブの取込みエリアに直接ドロップできます。');
+}
+
+// =============================================
+// === 参加者集計 ===
+// =============================================
+function renderSum(){
+  const ac=P.filter(p=>p.attend).sort((a,b)=>(a.no||9999)-(b.no||9999));
+  // 会社別集計
+  const byCoMap={};
+  ac.forEach(p=>{if(!byCoMap[p.company])byCoMap[p.company]=[];byCoMap[p.company].push(p);});
+  const cos=Object.entries(byCoMap).sort((a,b)=>b[1].length-a[1].length);
+  document.getElementById('sum-body').innerHTML=cos.map(([co,ps])=>`
+    <tr><td><b>${co}</b></td>
+    <td style="font-size:11px">${ps.map(p=>`${p.name}${isF(p.name)?'★':''}`).join('、')}</td>
+    <td style="text-align:center"><b>${ps.length}</b></td></tr>`).join('');
+  // 一覧
+  document.getElementById('sum-list').innerHTML=ac.map((p,i)=>{
+    const f=isF(p.name);
+    return`<tr class="${f?'fr':''}">
+      <td>${p.no||i+1}</td>
+      <td><b>${p.name}</b>${f?' <span class="bdg f">★</span>':''}</td>
+      <td style="font-size:11px;color:#666">${p.company}</td>
+      <td>${f?'女':'男'}</td>
+      <td>${p.score&&p.score!==100?p.score:'未入力'}</td></tr>`;
+  }).join('');
+}
+function expSumCSV(){
+  const ac=P.filter(p=>p.attend).sort((a,b)=>(a.no||9999)-(b.no||9999));
+  const rows=[['No.','氏名','性別','会社名','GROSSスコア']];
+  ac.forEach((p,i)=>rows.push([p.no||i+1,p.name,isF(p.name)?'女':'男',p.company,p.score&&p.score!==100?p.score:'']));
+  dlCSV(rows,'参加者集計.csv');
+}
+function dlCSV(rows,fname){
+  const csv='\uFEFF'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=fname;a.click();
+}
+
+// =============================================
+// === 固定グループ ===
+// =============================================
+function renderFxList2(){
+  const el=document.getElementById('fxlist');
+  if(!FX.length){el.innerHTML='<div class="card" style="color:#999;text-align:center;padding:20px">固定グループなし</div>';return;}
+  el.innerHTML=FX.map(f=>{
+    const names=f.ids.map(id=>{const p=P.find(x=>x.id===id);return p?p.name:'不明(ID:'+id+')'}).join('、');
+    return`<div class="fxi"><div style="flex:1"><b>${f.label}</b> <span class="bdg fi">${f.ids.length}人</span><div style="font-size:11px;color:#666;margin-top:2px">${names}</div></div><button class="btn sm r" onclick="rmFx(${f.id})">削除</button></div>`;
+  }).join('');
+}
+function openFix(){
+  document.getElementById('fxSrch').value='';
+  renderFxL();
+  document.getElementById('fixM').style.display='flex';
+}
+function renderFxL(){
+  const q=(document.getElementById('fxSrch').value||'').replace(/[\s　]/g,'').toLowerCase();
+  // ★修正: 全員表示（欠席者も表示、薄くする）
+  const list=[...P].sort((a,b)=>(a.no||9999)-(b.no||9999)).filter(p=>{
+    if(!q)return true;
+    return norm(p.name).toLowerCase().includes(q)||p.company.toLowerCase().includes(q);
+  });
+  const sel=new Set([...document.querySelectorAll('#fxsel input:checked')].map(i=>parseInt(i.value)));
+  document.getElementById('fxsel').innerHTML=list.map(p=>`
+    <label class="fxitem" style="${!p.attend?'opacity:.45':''}">
+      <input type="checkbox" value="${p.id}" ${sel.has(p.id)?'checked':''} onchange="updFxCnt()">
+      <span style="min-width:26px;font-size:10px;color:#999">${p.no||''}</span>
+      <span><b>${p.name}</b>${isF(p.name)?'<span class="bdg f">★</span>':''}</span>
+      <span style="margin-left:auto;font-size:10px;color:#777">${p.company}</span>
+      ${!p.attend?'<span class="bdg gy">欠席</span>':''}
+    </label>`).join('');
+  updFxCnt();
+}
+function updFxCnt(){document.getElementById('fxCnt').textContent=document.querySelectorAll('#fxsel input:checked').length;}
+function saveFix(){
+  const sel=[...document.querySelectorAll('#fxsel input:checked')].map(i=>parseInt(i.value));
+  if(sel.length<2){alert('2人以上選択してください');return;}
+  const label=sel.map(id=>{const p=P.find(x=>x.id===id);return p?norm(p.name).slice(0,4):''}).join('・');
+  FX.push({id:fgid++,label,ids:sel});
+  cm('fixM');renderFxList2();sv();
+}
+function rmFx(id){FX=FX.filter(f=>f.id!==id);renderFxList2();sv();}
+function clrFix(){if(confirm('全て削除しますか？')){FX=[];renderFxList2();sv();}}
+
+// =============================================
+// === ペナルティ ===
+// =============================================
+function setPM(v){PM=parseInt(v);document.getElementById('pdis').textContent=v;sv();}
+
+// =============================================
+// === ファイル取込み（修正版：3種類の検出）===
+// =============================================
+function dzOv(e){e.preventDefault();document.getElementById('dz').classList.add('over');}
+function dzLv(){document.getElementById('dz').classList.remove('over');}
+function dzDr(e){e.preventDefault();document.getElementById('dz').classList.remove('over');procF([...e.dataTransfer.files],null);}
+function onFS(e){procF([...e.target.files],null);e.target.value='';}
+function procF(files,folderId){
+  files.forEach(f=>{
+    const ext=f.name.split('.').pop().toLowerCase();
+    if(ext==='csv'){
+      const r=new FileReader();
+      r.onload=e=>parsePV(e.target.result,f.name,folderId);
+      r.readAsText(f,'Shift_JIS');
+    }else if(['xlsx','xls'].includes(ext)){
+      const r=new FileReader();
+      r.onload=e=>{
+        try{
+          const wb=XLSX.read(e.target.result,{type:'binary'});
+          const ws=wb.Sheets[wb.SheetNames[0]];
+
+          // セル値取得（c.w優先、なければc.v、どちらもなければ空文字）
+          function cv(addr){
+            const c=ws[addr];
+            if(!c)return '';
+            const raw=(c.w!==undefined&&c.w!==null)?String(c.w):String(c.v!==undefined?c.v:'');
+            return raw.replace(/\u3000/g,' ').trim();
+          }
+
+          // ── 宮崎工業杯形式: A列偶数行に組番号、C/D/F/G列で氏名・会社名 ──
+          // A14:A15〜A38:A39(13組) / A42:A43(15組)まで対応
+          const grpsDirect=[];
+          for(let row=14;row<=43;row+=2){
+            const aVal=cv('A'+row);
+            // 数値型セルはc.vが数値のためStringで取得、1〜20かチェック
+            const aNum=parseInt(aVal);
+            if(isNaN(aNum)||aNum<1||aNum>20)continue;
+            const nr=row+1;
+            const members=[];
+            for(const rv of [row,nr]){
+              const n1=cv('C'+rv), c1=cv('D'+rv);
+              const n2=cv('F'+rv), c2=cv('G'+rv);
+              if(n1&&n1.length>=2&&isNaN(Number(n1)))members.push({name:n1,company:c1});
+              if(n2&&n2.length>=2&&isNaN(Number(n2)))members.push({name:n2,company:c2});
+            }
+            if(members.length>=2)grpsDirect.push(members);
+          }
+          if(grpsDirect.length>=1){
+            pvGrp2rowDirect(grpsDirect,f.name,folderId);
+            return;
+          }
+
+          // フォールバック: CSV変換で汎用処理
+          const csv=XLSX.utils.sheet_to_csv(ws);
+          const rows=parseCSV(csv);
+          parsePVrows(rows,f.name,folderId);
+        }catch(er){alert('Excelの読込みに失敗: '+er.message);}
+      };
+      r.readAsBinaryString(f);
+    }else alert('CSV または Excel ファイルを選択してください');
+  });
+}
+function parseCSV(t){
+  return t.split(/\r?\n/).filter(l=>l.trim()).map(line=>{
+    const c=[];let cur='',inQ=false;
+    for(let i=0;i<line.length;i++){
+      if(line[i]==='"'){inQ=!inQ;continue;}
+      if(line[i]===','&&!inQ){c.push(cur.trim());cur='';}
+      else cur+=line[i];
+    }
+    c.push(cur.trim());return c;
+  });
+}
+
+// データ種別を判定して適切なプレビューを表示
+// Excel2D配列から直接判定（sheet_to_json用）
+function parsePVrows(rows,fname,folderId){
+  if(!rows||rows.length<2){alert('データが少なすぎます');return;}
+
+  // 空行・短い行を除去してフラット化したテキストで確認
+  const validRows=rows.filter(r=>Array.isArray(r)&&r.some(c=>String(c||'').trim()));
+
+  // 種別2: 数字+OUT/IN形式（宮崎工業杯Excelフォーマット）★最優先で判定
+  // A列が1〜20の整数、B列がOUT/IN
+  const hasNumGroup=validRows.some(r=>{
+    const c0=String(r[0]||'').trim();
+    const c1=String(r[1]||'').trim().toUpperCase();
+    return /^\d{1,2}$/.test(c0)&&parseInt(c0)>=1&&parseInt(c0)<=20&&(c1==='OUT'||c1==='IN');
+  });
+  if(hasNumGroup){pvGrp2row(validRows,fname,folderId);return;}
+
+  // 種別1: 第N組形式（「第1組」「第2組」などが行頭にある）
+  const hasGroup=validRows.some(r=>String(r[0]||'').trim().match(/^第\d+組$/));
+  if(hasGroup){pvGrp(validRows,fname,folderId);return;}
+
+  // 種別3: ②送信確認形式（2列目が「会社名」のヘッダー行がある）
+  const hasCompanyList=validRows.some(r=>String(r[1]||'').trim()==='会社名');
+  if(hasCompanyList){pvSendList(validRows,fname);return;}
+
+  // 種別4: 順位表/成績表（スコア数値で判定）
+  pvScore(validRows,fname,folderId);
+}
+
+// CSV文字列版（CSVファイルドロップ時）
+function parsePV(text,fname,folderId){
+  const rows=parseCSV(text);
+  parsePVrows(rows,fname,folderId);
+}
+
+
+function pvSendList(rows,fname){
+  const participants=[];
+  const EXCL=['会社名','組合','人数','注意点','集計','←','【'];
+  rows.forEach(r=>{
+    const co=String(r[1]||'').trim();
+    if(!co||EXCL.some(e=>co.includes(e))||/^\d+$/.test(co))return;
+    const stat=String(r[3]||'').trim();
+    if(stat==='×')return; // 欠席
+    for(let i=4;i<10;i++){
+      if(!r[i])continue;
+      let raw=String(r[i]).trim();
+      if(!raw||raw.startsWith('【'))continue;
+      const isF_=raw.startsWith('★');
+      raw=raw.replace(/★/g,'').trim();
+      // 末尾スコア分離
+      const m=raw.match(/^(.+?)(\d{2,3})$/);
+      let name=m?m[1].trim():raw;
+      const score=m?parseInt(m[2]):null;
+      name=name.replace(/[\s　]+/g,' ').trim();
+      if(name.length<2||/^\d+$/.test(name))continue;
+      if(isF_&&!name.includes('★'))name=name+'★';
+      participants.push({company:co,name,score});
+    }
+  });
+  if(!participants.length){alert('参加者データが検出できませんでした');return;}
+  document.getElementById('pvT').textContent='参加者データを取込む（②送信確認形式）';
+  document.getElementById('pvB').innerHTML=`
+    <div class="info">✅ <b>${participants.length}名</b>の参加者を検出しました（${fname}）<br>
+    ※ 既存の参加者と氏名が一致する場合は更新、新規の場合は追加します</div>
+    <div class="pvtbl"><table><thead><tr><th>会社名</th><th>氏名</th><th>スコア</th></tr></thead><tbody>
+      ${participants.map(p=>`<tr><td>${p.company}</td><td>${p.name}</td><td>${p.score||'—'}</td></tr>`).join('')}
+    </tbody></table></div>`;
+  document.getElementById('pvOk').onclick=()=>{
+    let added=0,updated=0;
+    participants.forEach(({company,name,score})=>{
+      const ex=P.find(x=>norm(x.name)===norm(name));
+      if(ex){
+        if(score)ex.score=score;
+        ex.attend=1;
+        updated++;
+      }else{
+        P.push({id:nid++,no:null,name,company,score:score||100,attend:1});
+        added++;
+      }
+      // 送信管理に会社を追加
+      if(!CO.find(c=>c.company===company)){
+        CO.push({id:coid++,company,fax:'',status:'回答済み'});
+      }else{
+        const c=CO.find(x=>x.company===company);
+        if(c&&c.status==='未送信')c.status='回答済み';
+      }
+    });
+    cm('pvM');updateCoFilterM();renderM();sv();
+    alert(`取込み完了！\n追加: ${added}名 / 更新: ${updated}名`);
+  };
+  document.getElementById('pvM').style.display='flex';
+}
+
+// 組み合わせ表
+function pvGrp(rows,fname,folderId){
+  const EXCL=['つつじ','くすの木','コース','時刻','選手','会社','組','NaN','GROSS'];
+  const grps=[];
+  rows.forEach(r=>{
+    if(!String(r[0]).trim().match(/[第\d].*組/))return;
+    const ms=r.filter((_,i)=>{
+      if(i===0)return false;
+      const s=String(r[i]).trim();
+      if(!s||s==='―'||/^\d+[:.\d]*$/.test(s))return false;
+      if(EXCL.some(e=>s.includes(e))||s.length<2)return false;
+      return true;
+    }).map(c=>String(c).trim());
+    if(ms.length>=2)grps.push(ms);
+  });
+  if(!grps.length){alert('組み合わせデータが検出できませんでした。\n「第1組」行にメンバー名があるか確認してください。\n\n検出ヒント: CSV/Excelの1列目が「第1組」「1組」などになっている必要があります。');return;}
+  document.getElementById('pvT').textContent='組み合わせデータを取込む（ペア記録）';
+  document.getElementById('pvB').innerHTML=`
+    <div class="info">✅ <b>${grps.length}組</b>のデータを検出（${fname}）</div>
+    <div class="frow"><label>セッション名</label><input type="text" id="slbl" value="${fname.replace(/\.[^.]+$/,'')}"></div>
+    <div class="pvtbl"><table><thead><tr><th>組</th><th>メンバー</th></tr></thead><tbody>
+      ${grps.map((g,i)=>`<tr><td>第${i+1}組</td><td>${g.join('、')}</td></tr>`).join('')}
+    </tbody></table></div>`;
+  document.getElementById('pvOk').onclick=()=>{
+    const label=document.getElementById('slbl').value||fname;
+    importGrps(grps,label,folderId);cm('pvM');
+  };
+  document.getElementById('pvM').style.display='flex';
+}
+
+// 2行1組形式の組み合わせ表（宮崎工業杯Excel対応）
+// 構造: col0=組番号, col1=OUT/IN, col2=名前1, col3=会社1, col4=スコア1, col5=名前2...
+// 各組は2行: 1行目(col0に番号あり) + 2行目(col0空、col1=時刻)
+// ── 直接セルアドレス読みで取得したグループを表示・保存する ──
+function pvGrp2rowDirect(grps,fname,folderId){
+  const totalMem=grps.reduce((s,g)=>s+g.length,0);
+  document.getElementById('pvT').textContent='組み合わせデータを取込む';
+  document.getElementById('pvB').innerHTML=
+    '<div class="info">✅ <b>'+grps.length+'組 / '+totalMem+'名</b>　氏名＋会社名を抽出（'+fname+'）</div>'+
+    '<div class="frow"><label>セッション名</label>'+
+    '<input type="text" id="slbl" value="'+fname.replace(/\.[^.]+$/,'')+'"></div>'+
+    '<div class="pvtbl"><table>'+
+    '<thead><tr style="background:var(--g3)"><th>組</th><th>氏名</th><th>会社名</th></tr></thead><tbody>'+
+    grps.map((g,gi)=>
+      g.map((m,mi)=>
+        '<tr'+(mi===0?' style="border-top:2px solid #c8e6c9"':'')+'>'+
+        (mi===0?'<td rowspan="'+g.length+'" style="font-weight:bold;vertical-align:top;color:var(--g2);white-space:nowrap">第'+(gi+1)+'組</td>':'')+
+        '<td>'+m.name+'</td>'+
+        '<td style="font-size:11px;color:#666">'+m.company+'</td>'+
+        '</tr>'
+      ).join('')
+    ).join('')+
+    '</tbody></table></div>';
+  document.getElementById('pvOk').onclick=()=>{
+    const label=document.getElementById('slbl').value||fname;
+    importGrps(grps,label,folderId);cm('pvM');
+  };
+  document.getElementById('pvM').style.display='flex';
+}
+
+function pvGrp2row(rows,fname,folderId){
+  // ── 列定義：ヘッダー行から「氏名」列を検出し、次列を「会社名」とする ──
+  // デフォルト: col2=氏名, col3=会社名, col5=氏名, col6=会社名
+  let namePairs=[{n:2,c:3},{n:5,c:6}]; // {n:氏名列, c:会社名列}
+
+  // ヘッダー行を探して列位置を確認（行0〜20の範囲、左半分col<10のみ）
+  for(let ri=0;ri<Math.min(rows.length,20);ri++){
+    const r=rows[ri];
+    const found=[];
+    for(let ci=0;ci<10&&ci<r.length;ci++){
+      const s=String(r[ci]||'').replace(/[　\s]/g,'');
+      if(s==='氏名'||s==='名前')found.push(ci);
+    }
+    if(found.length>=2){
+      namePairs=found.map(nc=>({n:nc,c:nc+1}));
+      break;
+    }
+  }
+
+  // ── 除外キーワード ──
+  const SKIP_EXACT=['OUT','IN','out','in','最少','最大'];
+  const SKIP_INCL=['スタート','時間','氏名','会社名','社名','スコア','前回','ニアピン',
+                   'ドラコン','ルール','馬券','法人','切り','記念','受付','朝礼',
+                   'レストラン','コンペ','開催','プレー','組み合','宮崎工業杯','協賛',
+                   '※','〒','TEL','FAX','携帯','http'];
+
+  function isValidName(v){
+    if(!v||v.length<2)return false;
+    // 数字・時刻・日付を除外
+    if(/^[\d.:\-\/年月日時分]+$/.test(v))return false;
+    // 完全一致除外
+    if(SKIP_EXACT.includes(v))return false;
+    // 部分一致除外
+    if(SKIP_INCL.some(k=>v.includes(k)))return false;
+    return true;
+  }
+
+  // ── 各組を抽出 ──
+  const grps=[];
+
+  for(let i=0;i<rows.length-1;i++){
+    const r    = rows[i];
+    const next = rows[i+1]||[];
+
+    // A列(col0)が1〜20の整数
+    const a=String(r[0]||'').trim();
+    if(!/^\d{1,2}$/.test(a))continue;
+    const gno=parseInt(a);
+    if(gno<1||gno>20)continue;
+
+    // B列(col1)がOUT/INであること（組番号行の確認）
+    const b=String(r[1]||'').trim().toUpperCase();
+    if(b!=='OUT'&&b!=='IN')continue;
+
+    // 氏名ペア列から名前+会社を収集（この行と次行）
+    const members=[];
+    for(const row of [r,next]){
+      for(const {n,c} of namePairs){
+        const name=String(row[n]||'').replace(/　/g,' ').trim();
+        const co  =String(row[c]||'').replace(/　/g,' ').trim();
+        if(!isValidName(name))continue;
+        if(members.some(m=>m.name===name))continue; // 重複除外
+        members.push({name,company:co});
+      }
+    }
+
+    if(members.length>=2)grps.push(members);
+  }
+
+  if(!grps.length){
+    alert('組み合わせデータが検出できませんでした。\n\n対応フォーマット:\n・A列に組番号（1〜15）\n・B列にOUT/IN\n・C列=氏名、D列=会社名\n・F列=氏名、G列=会社名\n・各組は2行');
+    return;
+  }
+
+  const totalMem=grps.reduce((s,g)=>s+g.length,0);
+  document.getElementById('pvT').textContent='組み合わせデータを取込む';
+  document.getElementById('pvB').innerHTML=
+    '<div class="info">✅ <b>'+grps.length+'組 / '+totalMem+'名</b>　氏名＋会社名を抽出（'+fname+'）</div>'+
+    '<div class="frow"><label>セッション名</label>'+
+    '<input type="text" id="slbl" value="'+fname.replace(/\.[^.]+$/,'')+'"></div>'+
+    '<div class="pvtbl"><table>'+
+    '<thead><tr style="background:var(--g3)"><th>組</th><th>氏名</th><th>会社名</th></tr></thead><tbody>'+
+    grps.map((g,gi)=>
+      g.map((m,mi)=>
+        '<tr'+(mi===0?' style="border-top:2px solid #c8e6c9"':'')+'>'+
+        (mi===0?'<td rowspan="'+g.length+'" style="font-weight:bold;vertical-align:top;color:var(--g2);white-space:nowrap">第'+(gi+1)+'組</td>':'')+
+        '<td>'+m.name+'</td>'+
+        '<td style="font-size:11px;color:#666">'+m.company+'</td>'+
+        '</tr>'
+      ).join('')
+    ).join('')+
+    '</tbody></table></div>';
+  document.getElementById('pvOk').onclick=()=>{
+    const label=document.getElementById('slbl').value||fname;
+    importGrps(grps,label,folderId);cm('pvM');
+  };
+  document.getElementById('pvM').style.display='flex';
+}
+
+
+// シンプルな数字+1行形式
+function pvGrpSimple(rows,fname,folderId){
+  const EXCL=['つつじ','くすの木','コース','時刻','選手','会社','スコア','OUT','IN','最少','ニアピン','ドラコン','NaN','GROSS','朝礼','受付','集合','レストラン'];
+  const grps=[];
+
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    const c0=String(r[0]||'').trim();
+    if(!/^\d{1,2}$/.test(c0)||parseInt(c0)<1||parseInt(c0)>20)continue;
+
+    // この行＋次行から名前を収集
+    const combined=[...r,...(rows[i+1]||[])];
+    const names=combined.filter((c,ci)=>{
+      if(ci===0)return false;
+      const s=String(c||'').trim();
+      if(!s||s.length<2)return false;
+      if(/^[\d.:\-]+$/.test(s))return false;
+      if(EXCL.some(e=>s.includes(e)))return false;
+      if(['OUT','IN','out','in'].includes(s))return false;
+      return true;
+    }).map(c=>String(c).trim().replace(/[\s　]+/g,' '));
+
+    // 氏名っぽいもの（スペースあり or 3〜8文字）だけ残す
+    const nameOnly=names.filter(n=>{
+      if(n.includes('㈱')||n.includes('㈲')||n.includes('株')||n.includes('有限'))return false;
+      if(n.includes('工業')||n.includes('建設')||n.includes('テック')||n.includes('デザイン'))return false;
+      if(n.includes('工務店')||n.includes('組合')||n.includes('ウラタ')||n.includes('ビップ'))return false;
+      return n.length>=2&&n.length<=12;
+    });
+
+    if(nameOnly.length>=2)grps.push(nameOnly);
+  }
+
+  if(!grps.length){
+    alert('組み合わせデータが検出できませんでした。\n\nこのファイルのフォーマット：\n1列目が組番号（1〜15）、2列目がOUT/IN、3列目以降に氏名・会社名が並ぶ形式に対応しています。');
+    return;
+  }
+
+  document.getElementById('pvT').textContent='組み合わせデータを取込む';
+  document.getElementById('pvB').innerHTML=
+    '<div class="info">✅ <b>'+grps.length+'組</b>のデータを検出しました（'+fname+'）</div>'+
+    '<div class="frow"><label>セッション名</label><input type="text" id="slbl" value="'+fname.replace(/\.[^.]+$/,'')+'"></div>'+
+    '<div class="pvtbl"><table><thead><tr><th>組</th><th>メンバー（氏名）</th></tr></thead><tbody>'+
+    grps.map((g,i)=>'<tr><td>第'+(i+1)+'組</td><td>'+g.join('、')+'</td></tr>').join('')+
+    '</tbody></table></div>';
+  document.getElementById('pvOk').onclick=()=>{
+    const label=document.getElementById('slbl').value||fname;
+    importGrps(grps,label,folderId);cm('pvM');
+  };
+  document.getElementById('pvM').style.display='flex';
+}
+
+// 順位表/成績表（★ここが修正の核心）
+function pvScore(rows,fname,folderId){
+  // ヘッダー行を探す
+  let headerRow=-1,nameCol=-1,scoreCol=-1;
+  // ヘッダーキーワードで探す
+  rows.forEach((r,ri)=>{
+    r.forEach((c,ci)=>{
+      const s=String(c||'').trim();
+      if(s.includes('氏名')||s.includes('名前')||s==='プレイヤー')nameCol=ci;
+      if(s.includes('GROSS')||s.includes('グロス')||s==='Gross')scoreCol=ci;
+    });
+    if(nameCol>=0&&scoreCol>=0&&headerRow<0)headerRow=ri;
+  });
+
+  // ヘッダーで見つからない場合：数値分析で検出
+  if(nameCol<0||scoreCol<0){
+    const dr=rows.slice(1,Math.min(10,rows.length));
+    const ncols=rows[0]?.length||0;
+    // 数値列を探す（60-200の範囲の数値が多い列 = GROSSスコア）
+    const numRatio=Array.from({length:ncols},(_,ci)=>{
+      const nums=dr.filter(r=>{const v=parseInt(r[ci]);return v>=60&&v<=220;});
+      return nums.length/Math.max(dr.length,1);
+    });
+    const maxR=Math.max(...numRatio);
+    if(maxR>0.4&&scoreCol<0)scoreCol=numRatio.indexOf(maxR);
+    // 文字列長が長い列 = 氏名
+    if(nameCol<0){
+      const strLen=Array.from({length:ncols},(_,ci)=>dr.reduce((a,r)=>a+String(r[ci]||'').length,0));
+      if(scoreCol>=0)strLen[scoreCol]=0;
+      nameCol=strLen.indexOf(Math.max(...strLen));
+    }
+    headerRow=0;
+  }
+
+  if(nameCol<0||scoreCol<0){
+    alert(`データの列を検出できませんでした。\n\nファイル: ${fname}\n\n対応フォーマット:\n① 「氏名」「GROSS」などのヘッダー行がある表\n② 名前列＋スコア数値列（60〜220）がある表\n③ ②送信確認Excel（第1行が「会社名/FAX番号/出欠/参加者名...」）\n④ 第N組 形式の組み合わせ表\n\n一番上の行のデータを確認してください。`);
+    return;
+  }
+
+  const ups=[];
+  rows.slice(headerRow+1).forEach(r=>{
+    const name=String(r[nameCol]||'').trim();
+    const score=parseInt(r[scoreCol]);
+    if(!name||name.length<2)return;
+    if(!score||isNaN(score)||score<60||score>220)return;
+    const p=P.find(x=>norm(x.name)===norm(name));
+    if(p)ups.push({p,old:p.score,nw:score,name});
+  });
+  if(!ups.length){
+    alert(`マスタと一致する選手が見つかりませんでした。\n\nファイル: ${fname}\n名前列: ${nameCol+1}列目  スコア列: ${scoreCol+1}列目\n\n参加者マスタの氏名と一致しているか確認してください。\n（スペースや全角/半角の違いに注意）`);
+    return;
+  }
+  document.getElementById('pvT').textContent='成績データ（スコア更新）';
+  document.getElementById('pvB').innerHTML=`
+    <div class="info">✅ <b>${ups.length}名</b>のスコアを更新します（${fname}）</div>
+    <div class="pvtbl"><table><thead><tr><th>氏名</th><th>現スコア</th><th></th><th>新スコア</th></tr></thead><tbody>
+      ${ups.map(u=>`<tr><td>${u.name}</td><td style="color:#999">${u.old}</td><td>→</td><td style="color:var(--g2);font-weight:bold">${u.nw}</td></tr>`).join('')}
+    </tbody></table></div>`;
+  document.getElementById('pvOk').onclick=()=>{
+    ups.forEach(u=>u.p.score=u.nw);
+    cm('pvM');renderM();sv();
+    if(folderId){
+      const folder=FOLDERS.find(f=>f.id===folderId);
+      if(folder){
+        folder.files.push({type:'ranking',label:fname,data:ups.map(u=>({name:u.name,score:u.nw}))});
+        sv();renderFolders();
+      }
+    }
+    alert(`${ups.length}名のスコアを更新しました`);
+  };
+  document.getElementById('pvM').style.display='flex';
+}
+
+// メンバーから正規化名を取得（{name,company}でも文字列でも対応）
+function mName(m){return typeof m==='object'?m.name:m;}
+function mCo(m){return typeof m==='object'?m.company:'';}
+
+function importGrps(grps,label,folderId){
+  // ペアヒストリーを更新（氏名ベース）
+  grps.forEach(g=>{
+    for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){
+      const k=pk(mName(g[i]),mName(g[j]));
+      PH[k]=(PH[k]||0)+1;
+    }
+  });
+  const sid='s'+Date.now();
+  SESSIONS.push({id:sid,date:new Date().toISOString(),label,folderId,groups:grps});
+  if(folderId){
+    const folder=FOLDERS.find(f=>f.id===folderId);
+    if(folder)folder.files.push({type:'grouping',label,data:grps});
+  }
+  sv();renderPairRank();
+  const folName=folderId?(FOLDERS.find(f=>f.id===folderId)?.name||''):'';
+  const msg=folName
+    ?'「'+folName+'」フォルダに保存しました！\n'+grps.length+'組のペアデータを記録しました。'
+    :'取込み完了！'+grps.length+'組のペアデータを記録しました。';
+  alert(msg);
+}
+function recalcPH(){
+  PH={};
+  SESSIONS.forEach(s=>s.groups.forEach(g=>{
+    for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){
+      const k=pk(mName(g[i]),mName(g[j]));
+      PH[k]=(PH[k]||0)+1;
+    }
+  }));
+}
+
+// =============================================
+// === 組み合わせ生成 ===
+// =============================================
+function generate(){
+  const ac=P.filter(p=>p.attend);
+  if(ac.length<4){alert('参加者が4人未満です');return;}
+  const ngSel=document.getElementById('ngSel').value;
+  const ng=ngSel==='auto'?Math.min(15,Math.ceil(ac.length/4)):parseInt(ngSel);
+  const hasPast=Object.keys(PH).length>0;
+  const doBalance=!!(document.getElementById('chkBalance')&&document.getElementById('chkBalance').checked);
+
+  // ==============================
+  // スコア均等化モード（スネーク配置）
+  // ==============================
+  if(doBalance){
+    const grps=Array.from({length:ng},()=>[]);
+    const placed=new Set();
+
+    // 固定グループを先に配置
+    FX.forEach((fx,fi)=>{
+      const gi=fi%ng;
+      fx.ids.forEach(id=>{
+        const p=ac.find(x=>x.id===id);
+        if(p&&!placed.has(p.id)&&grps[gi].length<4){
+          grps[gi].push(p);placed.add(p.id);
+        }
+      });
+    });
+
+    // 残り参加者：スコア昇順（100点＝初参加もそのまま含む）
+    const pool=[...ac].filter(p=>!placed.has(p.id))
+      .map(p=>({...p,_sc:p.score&&p.score>60?p.score:100}))
+      .sort((a,b)=>a._sc-b._sc);
+
+    // スネーク順に組インデックスを割り当て
+    // ng=4例: 0,1,2,3,3,2,1,0,0,1,2,3,...
+    const idx=[];
+    let d=1,g=0;
+    for(let k=0;k<pool.length;k++){
+      idx.push(g);
+      g+=d;
+      if(g>=ng){g=ng-1;d=-1;}
+      else if(g<0){g=0;d=1;}
+    }
+
+    // 同会社が同組にならないようスワップ（3パス）
+    for(let pass=0;pass<3;pass++){
+      for(let i=0;i<pool.length;i++){
+        const gi=idx[i];
+        const clash=pool.some((_,j)=>j!==i&&idx[j]===gi&&pool[j].company===pool[i].company);
+        if(!clash)continue;
+        for(let j=i+1;j<pool.length;j++){
+          if(idx[j]===gi)continue;
+          const gj=idx[j];
+          const okI=!pool.some((_,k2)=>k2!==j&&idx[k2]===gj&&pool[k2].company===pool[i].company);
+          const okJ=!pool.some((_,k2)=>k2!==i&&idx[k2]===gi&&pool[k2].company===pool[j].company);
+          if(okI&&okJ){const t=idx[i];idx[i]=idx[j];idx[j]=t;break;}
+        }
+      }
+    }
+
+    // 配置実行
+    pool.forEach((p,i)=>{
+      const tg=grps[idx[i]];
+      if(tg.length<4){tg.push(p);placed.add(p.id);}
+      else{
+        const alt=grps.find(g2=>g2.length<4);
+        if(alt){alt.push(p);placed.add(p.id);}
+      }
+    });
+
+    GR=grps.filter(g=>g.length>0);
+
+    // 組平均計算（100点も含む）
+    const avgs=GR.map(g=>{
+      const gs=g.filter(p=>p.score&&p.score>60);
+      if(!gs.length)return 100;
+      return Math.round(gs.reduce((s,p)=>s+p.score,0)/gs.length);
+    });
+    const maxA=Math.max(...avgs),minA=Math.min(...avgs);
+    renderResult(0,hasPast);
+    document.getElementById('ginfo').textContent=
+      GR.length+'組生成　📊均等化　組平均: 最大'+maxA+' ／ 最小'+minA+' ／ 差'+(maxA-minA)+'点'
+      +(hasPast?' ／ 過去ペア反映':'');
+    return;
+  }
+
+  // ==============================
+  // 通常モード
+  // ==============================
+  const coMap=new Map();
+  ac.forEach(p=>{if(!coMap.has(p.company))coMap.set(p.company,[]);coMap.get(p.company).push(p);});
+
+  let best=null,bsc=Infinity;
+  for(let t=0;t<8000;t++){
+    const grps=Array.from({length:ng},()=>[]);
+    const placed=new Set();
+    FX.forEach((f,i)=>{
+      const gi=i%ng;
+      f.ids.forEach(id=>{const p=ac.find(x=>x.id===id);if(p&&!placed.has(p.id)&&grps[gi].length<4){grps[gi].push(p);placed.add(p.id);}});
+    });
+    const pool=ac.filter(p=>!placed.has(p.id)).sort(()=>Math.random()-.5);
+    const fem=pool.filter(p=>isF(p.name));
+    const mal=pool.filter(p=>!isF(p.name));
+    fem.forEach(f=>{
+      const noF=grps.filter(g=>g.length<4&&!g.some(p=>isF(p.name)));
+      (noF.length?noF:grps.filter(g=>g.length<4))[0]?.push(f);
+    });
+    mal.forEach(m=>{
+      const cands=grps.filter(g=>g.length<4);
+      if(!cands.length)return;
+      const coCount=coMap.get(m.company)?.length||1;
+      const coMult=Math.max(1,Math.ceil(coCount/2));
+      cands.sort((a,b)=>{
+        const sa=a.reduce((s,x)=>s+(x.company===m.company?600*coMult:0)+getPP(x.name,m.name),0);
+        const sb=b.reduce((s,x)=>s+(x.company===m.company?600*coMult:0)+getPP(x.name,m.name),0);
+        return(sa-sb)+(Math.random()-.5)*25;
+      });
+      cands[0].push(m);
+    });
+    let sc=0;
+    grps.forEach(g=>{
+      const fc=g.filter(p=>isF(p.name)).length;
+      const isLEE=g.some(p=>p.company.includes('LEE')||p.company.includes('ＬＥＥ'));
+      if(fc>=2&&!isLEE)sc+=10000;
+      for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){
+        if(g[i].company===g[j].company)sc+=800;
+        sc+=getPP(g[i].name,g[j].name);
+      }
+    });
+    if(sc<bsc){bsc=sc;best=grps.map(g=>[...g]);}
+    if(bsc===0)break;
+  }
+  GR=best||[];
+  renderResult(bsc,hasPast);
+  document.getElementById('ginfo').textContent=GR.length+'組生成（ペナルティ:'+bsc+(hasPast?' ／ 過去ペア反映':'')+')';
+}
+
+function renderResult(score,hasPast){
+  const warns=[];
+  // 全体平均スコア（100点込み）
+  const _allp=P.filter(p=>p.attend&&p.score&&p.score>60);
+  const totalAvg=_allp.length?Math.round(_allp.reduce((s,p)=>s+p.score,0)/_allp.length):100;
+  const wbox=document.getElementById('wbox');
+  const pi=document.getElementById('pib');
+  if(hasPast){pi.style.display='block';pi.innerHTML=`🔀 過去データ（${SESSIONS.length}回分・${Object.keys(PH).length}ペア）を考慮。同じペアの重複を最大限回避しました。`;}
+  else pi.style.display='none';
+  document.getElementById('gg').innerHTML=GR.map((g,i)=>{
+    const fc=g.filter(p=>isF(p.name)).length;
+    const isLEE=g.some(p=>p.company.includes('LEE')||p.company.includes('ＬＥＥ'));
+    const hw=fc>=2&&!isLEE;
+    const cos=g.map(p=>p.company);
+    const sameCo=cos.length!==new Set(cos).size;
+    if(hw)warns.push(`第${i+1}組に女性${fc}人`);
+    if(sameCo)warns.push(`第${i+1}組に同会社重複`);
+    const avg=g.length?Math.round(g.reduce((a,p)=>a+p.score,0)/g.length):0;
+    const[cr,tm]=COURSES[i]||['',''];
+    const mems=g.map(p=>{
+      const f=isF(p.name);
+      const pw=g.filter(q=>q!==p).map(q=>{const c=PH[pk(norm(p.name),norm(q.name))]||0;return c>0?norm(q.name).slice(0,3)+'×'+c:null;}).filter(Boolean);
+      return`<div class="mr${f?' fm':''}">
+        <div style="flex:1"><div class="mn">${p.name}${f?'<span class="bdg f">★</span>':''}</div>
+        <div class="mc">${p.company}${pw.length?`<span class="ptag">過去:${pw.join(' ')}</span>`:''}
+        ${g.filter(q=>q!==p&&q.company===p.company).length?'<span class="ptag" style="background:#ffebee;color:#c62828">同社!</span>':''}
+        </div></div><div class="ms">${p.score&&p.score!==100?p.score:''}</div></div>`;
+    }).join('');
+    return`<div class="gc${hw||sameCo?' wc':''}">
+      <div class="ghead"><span>第${i+1}組</span>
+        ${hw?'<span class="bdg w">⚠女性'+fc+'人</span>':''}
+        ${sameCo?'<span class="bdg w">⚠同社</span>':''}
+        <span class="cr">${cr} ${tm}</span></div>
+      <div class="gbdy">${mems}</div>
+      <div class="atg" style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10px;color:#aaa">グループ平均スコア</span>
+        <b style="font-size:13px;color:${avg?(Math.abs(avg-totalAvg)<=8?'var(--g2)':Math.abs(avg-totalAvg)<=15?'var(--or)':'#c62828'):'#ccc'}">${avg?avg:'—'}</b>
+      </div>
+    </div>`;
+  }).join('');
+  if(warns.length){wbox.style.display='block';wbox.innerHTML='⚠ '+warns.join(' ／ ');}
+  else wbox.style.display='none';
+}
+function saveRes(){
+  if(!GR.length){alert('先に組み合わせを生成してください');return;}
+
+  // フォルダ選択ダイアログを動的に表示
+  const modal = document.getElementById('saveResM');
+  // フォルダ選択肢を更新
+  const sel = document.getElementById('saveResFolSel');
+  sel.innerHTML = '<option value="">-- 過去フォルダを選択 --</option>'
+    + FOLDERS.sort((a,b)=>b.date.localeCompare(a.date))
+        .map(f=>'<option value="'+f.id+'">'+f.name+'</option>').join('');
+  // デフォルトのセッション名を設定
+  document.getElementById('saveResLbl').value = '第21回 2026.4.12';
+  modal.style.display = 'flex';
+}
+
+function doSaveRes(){
+  const lbl = document.getElementById('saveResLbl').value.trim();
+  const fid = document.getElementById('saveResFolSel').value;
+  if(!lbl){alert('セッション名を入力してください');return;}
+  if(!fid){alert('保存先フォルダを選択してください');return;}
+  cm('saveResM');
+  // name と company をセットで保存
+  importGrps(GR.map(g=>g.map(p=>({name:p.name,company:p.company}))), lbl, fid);
+}
+function expCSV(){
+  if(!GR.length){alert('先に生成してください');return;}
+  const rows=[['組','コース','時刻','選手①','会社①','選手②','会社②','選手③','会社③','選手④','会社④','平均スコア']];
+  GR.forEach((g,i)=>{
+    const[cr,tm]=COURSES[i]||['',''];
+    const avg=g.length?Math.round(g.reduce((a,p)=>a+p.score,0)/g.length):0;
+    const cols=[`第${i+1}組`,cr,tm];
+    for(let j=0;j<4;j++){cols.push(g[j]?.name||'―');cols.push(g[j]?.company||'');}
+    cols.push(avg);rows.push(cols);
+  });
+  dlCSV(rows,`ゴルフコンペ組み合わせ_${new Date().toLocaleDateString('ja-JP').replace(/\//g,'')}.csv`);
+}
+
+// =============================================
+// === 過去フォルダ ===
+// =============================================
+function renderFolders(){
+  const nav=document.getElementById('folder-nav');
+  const view=document.getElementById('folder-view');
+
+  if(!currentFolderId){
+    nav.innerHTML='<span style="color:#666">📁 過去データ</span>';
+    if(!FOLDERS.length){
+      view.innerHTML='<div class="card" style="color:#999;text-align:center;padding:30px">フォルダがありません。「＋ 新しいフォルダを作成」でフォルダを作成してください。</div>';
+      return;
+    }
+    // フォルダ未割当のセッション（folderId未設定）
+    const orphans=SESSIONS.filter(s=>!s.folderId||!FOLDERS.find(f=>f.id===s.folderId));
+
+    let folHtml='<div class="folder-grid">'+
+      FOLDERS.sort((a,b)=>b.date.localeCompare(a.date)).map(f=>{
+        const fSess=SESSIONS.filter(s=>s.folderId===f.id).length;
+        const _efid=f.id.replace(/'/g,"\\'");
+        return '<div style="position:relative">'+
+          '<div class="folder-card" onclick="openFolder(\''+f.id+'\')">'+ 
+          '<div class="folder-icon">📁</div>'+
+          '<div class="folder-name">'+f.name+'</div>'+
+          '<div class="folder-meta">'+f.date+' ／ '+(f.venue||'')+'</div>'+
+          '<div class="folder-meta" style="margin-top:4px">'+f.files.length+'ファイル'+(fSess?' / 組合せ'+fSess+'件':'')+'</div>'+
+          '</div>'+
+          '<button class="btn sm" style="position:absolute;top:6px;right:6px;padding:2px 6px;font-size:10px" '+
+          'onclick="event.stopPropagation();openEditFolder(\''+_efid+'\')">✏️</button>'+
+        '</div>';
+      }).join('')+'</div>';
+
+    if(orphans.length){
+      folHtml+='<div class="card" style="margin-top:14px;border-left:3px solid var(--or)">';
+      folHtml+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
+      folHtml+='<b style="font-size:13px;color:var(--or)">⚠️ フォルダ未割当の取込みデータ（'+orphans.length+'件）</b>';
+      folHtml+='<span style="font-size:11px;color:#666">フォルダに移動してください</span>';
+      folHtml+='</div>';
+      orphans.forEach((s)=>{
+        const sidx=SESSIONS.indexOf(s);
+        folHtml+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--bd);border-radius:6px;margin-bottom:6px;background:#fff">';
+        const totalMem=s.groups.reduce((a,g)=>a+g.length,0);
+        folHtml+='<div style="flex:1"><div style="font-weight:bold;font-size:12px">🏌️ '+s.label+'</div>';
+        folHtml+='<div style="font-size:11px;color:#666;margin-top:2px">'+s.groups.length+'組 / '+totalMem+'名 ／ '+new Date(s.date).toLocaleDateString('ja-JP')+'</div></div>';
+        folHtml+='<select style="font-size:11px;padding:3px 6px;border:1px solid var(--bd);border-radius:5px" id="osel'+sidx+'">';
+        folHtml+='<option value="">移動先フォルダ</option>';
+        folHtml+=FOLDERS.sort((a,b)=>b.date.localeCompare(a.date)).map(f=>'<option value="'+f.id+'">'+f.name+'</option>').join('');
+        folHtml+='</select>';
+        folHtml+='<button class="btn g sm" onclick="moveSessionToFolder('+sidx+')">📁 移動</button>';
+        folHtml+='<button class="btn r sm" onclick="deleteSession('+sidx+')">削除</button>';
+        folHtml+='</div>';
+      });
+      folHtml+='</div>';
+    }
+    view.innerHTML=folHtml;
+  }else{
+    const folder=FOLDERS.find(f=>f.id===currentFolderId);
+    if(!folder){currentFolderId=null;renderFolders();return;}
+    nav.innerHTML=`<span style="color:var(--bl);cursor:pointer" onclick="closeFolder()">📁 過去データ</span> / <span>${folder.name}</span>`;
+    let html=`<div class="folder-content">
+      <div class="folder-back" onclick="closeFolder()">← 戻る</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <b style="font-size:14px">📁 ${folder.name}</b>
+        <span style="font-size:11px;color:#666">${folder.date} ／ ${folder.venue||''}</span>
+        <button class="btn sm" style="margin-left:auto" onclick="openEditFolder('${folder.id}')">✏️ 名称変更</button>
+        <button class="btn sm r" onclick="delFolder('${folder.id}')">フォルダ削除</button>
+      </div>`;
+    if(!folder.files.length){
+      html+='<div style="color:#999;font-size:12px;padding:20px;text-align:center">ファイルがありません。「📥 データをフォルダに取込む」からデータを追加してください。</div>';
+    }else{
+      html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">';
+      folder.files.forEach((fi,idx)=>{
+        const icon=fi.type==='ranking'?'🏆':fi.type==='notice'?'📝':'🏌️';
+        const typeLabel=fi.type==='ranking'?'順位表':fi.type==='notice'?'案内文':'組み合わせ表';
+        const cnt=fi.type==='ranking'?fi.data.length+'名':fi.type==='notice'?'':''+fi.data.length+'組';
+        const savedAt=fi.savedAt?new Date(fi.savedAt).toLocaleDateString('ja-JP'):'';
+        const esc_fid=folder.id.replace(/'/g,"\\'");
+        html+='<div style="position:relative">'+
+          '<div class="folder-card" style="padding:10px" onclick="showFileDetail(\'' +esc_fid+ '\',' +idx+ ')">'+
+          '<div style="font-size:22px;margin-bottom:4px">'+icon+'</div>'+
+          '<div style="font-weight:bold;font-size:12px;margin-bottom:2px">'+fi.label+'</div>'+
+          '<div style="font-size:10px;color:#777">'+typeLabel+(cnt?' / '+cnt:'')+'</div>'+
+          (savedAt?'<div style="font-size:10px;color:#aaa;margin-top:2px">'+savedAt+'</div>':'')+
+          '</div>'+
+          '<button class="btn sm r" style="position:absolute;top:6px;right:6px;padding:2px 6px" '+
+          'onclick="event.stopPropagation();delFolderFile(\'' +esc_fid+ '\',' +idx+ ')">✕</button>'+
+          '</div>';
+      });
+      html+='</div>';
+    }
+    html+='</div>';
+    view.innerHTML=html;
+  }
+  renderPairRank();
+}
+function openFolder(id){currentFolderId=id;renderFolders();}
+
+// フォルダ未割当セッションをフォルダに移動
+function delFolderFile(fid,idx){
+  const folder=FOLDERS.find(f=>f.id===fid);
+  if(!folder||!folder.files[idx])return;
+  const fi=folder.files[idx];
+  if(!confirm('「'+fi.label+'」を削除しますか？\n'+
+    (fi.type==='grouping'?'※このファイルに対応するペアデータも削除されます。':'')
+  ))return;
+  folder.files.splice(idx,1);
+  // 対応するSESSIONSも削除してペア再計算
+  if(fi.type==='grouping'){
+    SESSIONS=SESSIONS.filter(s=>!(s.folderId===fid&&s.label===fi.label));
+    recalcPH();
+  }
+  sv();renderFolders();
+}
+
+function moveSessionToFolder(sidx){
+  const sel=document.getElementById('osel'+sidx);
+  const fid=sel?sel.value:'';
+  if(!fid){alert('移動先フォルダを選択してください');return;}
+  const folder=FOLDERS.find(f=>f.id===fid);
+  const s=SESSIONS[sidx];
+  if(!folder||!s)return;
+  // SESSIONSのfolderId更新
+  s.folderId=fid;
+  // フォルダのfilesにも追加
+  const already=folder.files.some(f=>f.type==='grouping'&&f.label===s.label);
+  if(!already){
+    // groupsデータをそのまま保存（{name,company}形式を維持）
+    folder.files.push({type:'grouping',label:s.label,data:s.groups,savedAt:s.date});
+  }
+  sv();renderFolders();
+  alert('「'+folder.name+'」に移動しました');
+}
+
+// フォルダ未割当セッションを削除
+function deleteSession(sidx){
+  const s=SESSIONS[sidx];
+  if(!s)return;
+  if(!confirm('「'+s.label+'」のペアデータを削除しますか？\n組み合わせ重複回避への影響がなくなります。'))return;
+  SESSIONS.splice(sidx,1);
+  recalcPH();sv();renderFolders();
+}
+function closeFolder(){currentFolderId=null;renderFolders();}
+function delFolder(id){
+  if(!confirm('このフォルダとデータを削除しますか？'))return;
+  FOLDERS=FOLDERS.filter(f=>f.id!==id);
+  SESSIONS=SESSIONS.filter(s=>s.folderId!==id);
+  recalcPH();currentFolderId=null;renderFolders();sv();
+}
+function showFileDetail(fid,idx){
+  const folder=FOLDERS.find(f=>f.id===fid);
+  if(!folder||!folder.files[idx])return;
+  const fi=folder.files[idx];
+  if(fi.type==='ranking'){
+    const rows=[['順位','氏名','スコア'],...fi.data.map((d,i)=>[i+1,d.name,d.score])];
+    const s=rows.map(r=>r.join('\t')).join('\n');
+    alert('📊 '+fi.label+'\n\n'+fi.data.slice(0,10).map((d,i)=>`${i+1}. ${d.name} ${d.score}`).join('\n')+(fi.data.length>10?'\n... 他'+(fi.data.length-10)+'名':''));
+  }else if(fi.type==='notice'){
+    const nd=fi.data;
+    const saved=fi.savedAt?new Date(fi.savedAt).toLocaleString('ja-JP'):'';
+    const info=[
+      '📅 保存日時: '+saved,
+      '　開催日: '+nd.date+' ('+nd.dateDay+')',
+      '　会場: '+nd.venue,
+      '　スタート: '+nd.startOUT+' '+nd.startTime,
+      '　参加費: '+nd.entryFee,
+      '　返信期限: '+nd.deadline,
+    ].join('\n');
+    if(confirm('📝 '+fi.label+'\n\n'+info+'\n\nこの案内文設定を読み込みますか？')){
+      loadNoticeFromFolder(fid,idx);
+    }
+  }else{
+    // 組み合わせ表（氏名のみ or 氏名+会社のどちらでも対応）
+    const grpLines=fi.data.slice(0,5).map((g,i)=>{
+      const members=g.map(m=>typeof m==='object'?m.name+'（'+m.company+'）':m);
+      return '第'+(i+1)+'組: '+members.join('・');
+    });
+    alert('🏌️ '+fi.label+'\n\n'+grpLines.join('\n')+(fi.data.length>5?'\n... 他'+(fi.data.length-5)+'組':''));
+  }
+}
+function openNewFolder(){
+  document.getElementById('foldNm').value='';
+  document.getElementById('foldDt').value='';
+  document.getElementById('foldVn').value='';
+  document.getElementById('newFolM').style.display='flex';
+}
+function createFolder(){
+  const name=document.getElementById('foldNm').value.trim();
+  const date=document.getElementById('foldDt').value;
+  const venue=document.getElementById('foldVn').value.trim();
+  if(!name){alert('フォルダ名を入力してください');return;}
+  FOLDERS.push({id:'f'+Date.now(),name,date:date||new Date().toISOString().slice(0,10),venue,files:[]});
+  cm('newFolM');renderFolders();sv();
+}
+function openEditFolder(fid){
+  const folder=FOLDERS.find(f=>f.id===fid);
+  if(!folder)return;
+  document.getElementById('editFoldId').value=fid;
+  document.getElementById('editFoldNm').value=folder.name;
+  document.getElementById('editFoldDt').value=folder.date||'';
+  document.getElementById('editFoldVn').value=folder.venue||'';
+  document.getElementById('editFolM').style.display='flex';
+  setTimeout(()=>document.getElementById('editFoldNm').focus(),50);
+}
+function saveEditFolder(){
+  const fid=document.getElementById('editFoldId').value;
+  const name=document.getElementById('editFoldNm').value.trim();
+  const date=document.getElementById('editFoldDt').value;
+  const venue=document.getElementById('editFoldVn').value.trim();
+  if(!name){alert('フォルダ名を入力してください');return;}
+  const folder=FOLDERS.find(f=>f.id===fid);
+  if(!folder)return;
+  folder.name=name;
+  if(date)folder.date=date;
+  folder.venue=venue;
+  cm('editFolM');renderFolders();sv();
+}
+function openImportFolder(){
+  const sel=document.getElementById('impFolSel');
+  sel.innerHTML=FOLDERS.sort((a,b)=>b.date.localeCompare(a.date)).map(f=>`<option value="${f.id}">${f.name}</option>`).join('');
+  document.getElementById('impFolPrev').innerHTML='';
+  document.getElementById('impFolOk').style.display='none';
+  document.getElementById('impFolM').style.display='flex';
+}
+function onFolImp(e){
+  const fid=document.getElementById('impFolSel').value;
+  const type=document.getElementById('impFolType').value;
+  const files=[...e.target.files];
+  if(!files.length)return;
+  e.target.value='';
+  procF(files,fid);
+  cm('impFolM');
+}
+function renderPairRank(){
+  const sorted=Object.entries(PH).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  const rk=document.getElementById('prank');
+  if(!sorted.length){rk.innerHTML='<span style="color:#999;font-size:12px">データなし（過去フォルダから組み合わせ表を取込んでください）</span>';return;}
+
+  // ペアキーから表示名を解決（マスタPから会社名も取得）
+  function resolveName(normN){
+    const p=P.find(x=>norm(x.name)===normN);
+    return p?p.name:normN;
+  }
+  function resolveCo(normN){
+    const p=P.find(x=>norm(x.name)===normN);
+    return p?'<span style="font-size:10px;color:#888">（'+p.company+'）</span>':'';
+  }
+
+  rk.innerHTML='<div class="tw" style="max-height:200px;overflow-y:auto"><table><thead><tr><th class="nd">順位</th><th class="nd">ペア</th><th class="nd">回数</th></tr></thead><tbody>'+
+    sorted.map(([k,c],i)=>{
+      const[a,b]=k.split('___');
+      const cl=c>=3?'r':c>=2?'or':'ok';
+      return'<tr><td>'+(i+1)+'</td><td>'+resolveName(a)+resolveCo(a)+' × '+resolveName(b)+resolveCo(b)+'</td><td><span class="bdg '+cl+'">'+ c+'回</span></td></tr>';
+    }).join('')+'</tbody></table></div>';
+}
+
+// =============================================
+// === キーボード ===
+// =============================================
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('addM').style.display==='flex')savePl();
+  if(e.key==='Escape')['addM','addCoM','fixM','pvM','newFolM','impFolM','editFolM'].forEach(cm);
+});
+
+// =============================================
+// === 案内文作成 ===
+// =============================================
+
+// 案内文のデフォルト設定（真名R8.04を基準）
+const NOTICE_DEFAULTS = {
+  round: '第21回',
+  addressType: 'general',      // general=各位, individual=個別
+  addressIndividual: '',
+  date: '令和8年 4月 12日',
+  dateDay: '日曜日',
+  reception: '7:00',
+  venue: '真名カントリークラブ　真名コース',
+  address: '千葉県茂原市真名1744',
+  tel: '0475-24-5211',
+  startOUT: 'つつじ→くすの木',
+  startIN: 'くすの木→こぶし',
+  startTime: '8:44',
+  morningTime: '8:20',
+  playFee: '個人精算　後日ご連絡致します。　キャディ・昼食付',
+  entryFee: '5,000円/1人',
+  deadline: '2月 26日',
+  fax: '0475-35-5646',
+  email: 'info@miyazaki-katawaku.com',
+  note1: '服装他…ソフトスパイクのみジーパン、Ｔシャツ、サンダル、スリッパでは入館出来ません。',
+  note2: 'クラブハウスからコースまでの移動が特殊の為早めの行動をお願い申し上げます。',
+};
+
+let noticeData = {...NOTICE_DEFAULTS};
+let noticePrintTarget = 'all'; // all=全社, single=1枚
+
+function renderNotice(){
+  const el = document.getElementById('tp-notice');
+  const nd = noticeData;
+
+  // フォルダ選択肢を生成（クォート問題を避けるため関数化）
+  function folderOpts(){
+    return FOLDERS.sort((a,b)=>b.date.localeCompare(a.date))
+      .map(f=>'<option value="'+f.id+'">'+f.name+'</option>').join('');
+  }
+
+  const addrIndStyle = nd.addressType==='individual' ? '' : 'display:none';
+
+  // HTMLを文字列結合で組み立て（テンプレートリテラルの深いネストを避ける）
+  let h = '';
+  h += '<div style="display:grid;grid-template-columns:400px 1fr;gap:14px;align-items:start">';
+
+  // ===== 左: 設定パネル =====
+  h += '<div>';
+  h += '<div class="card">';
+  h += '<b style="font-size:13px">⚙️ 案内文の設定</b>';
+  h += '<div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">';
+
+  // 宛先
+  h += '<div class="frow"><label>宛先の種類</label>';
+  h += '<select id="nAddr" onchange="noticeData.addressType=this.value;';
+  h += 'document.getElementById(\'nAddrInd\').style.display=this.value===\'individual\'?\'\'\'display:none\';';
+  h += 'updateNoticePreview()">';
+  h += '<option value="general"'+(nd.addressType==='general'?' selected':'')+'>各　位（一般）</option>';
+  h += '<option value="individual"'+(nd.addressType==='individual'?' selected':'')+'>個別（会社名・氏名指定）</option>';
+  h += '</select></div>';
+
+  h += '<div class="frow" id="nAddrInd" style="'+addrIndStyle+'">';
+  h += '<label>個別宛先</label>';
+  h += '<input type="text" id="nAddrTxt" value="'+nd.addressIndividual+'" ';
+  h += 'placeholder="例: リゾートトラスト㈱　照沼様" ';
+  h += 'oninput="noticeData.addressIndividual=this.value;updateNoticePreview()"></div>';
+
+  // 回・曜日
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+  h += '<div class="frow"><label>回</label><input type="text" value="'+nd.round+'" oninput="noticeData.round=this.value;updateNoticePreview()"></div>';
+  h += '<div class="frow"><label>曜日</label><input type="text" value="'+nd.dateDay+'" oninput="noticeData.dateDay=this.value;updateNoticePreview()"></div>';
+  h += '</div>';
+
+  // 開催日
+  h += '<div class="frow"><label>開催日（和暦表記）</label>';
+  h += '<input type="text" value="'+nd.date+'" oninput="noticeData.date=this.value;updateNoticePreview()"></div>';
+
+  // 受付
+  h += '<div class="frow"><label>受付開始時刻</label>';
+  h += '<input type="text" value="'+nd.reception+'" placeholder="7:00" oninput="noticeData.reception=this.value;updateNoticePreview()"></div>';
+
+  // 会場
+  h += '<div class="frow"><label>会場名</label>';
+  h += '<input type="text" value="'+nd.venue+'" oninput="noticeData.venue=this.value;updateNoticePreview()"></div>';
+
+  h += '<div class="frow"><label>住所</label>';
+  h += '<input type="text" value="'+nd.address+'" oninput="noticeData.address=this.value;updateNoticePreview()"></div>';
+
+  h += '<div class="frow"><label>TEL</label>';
+  h += '<input type="text" value="'+nd.tel+'" oninput="noticeData.tel=this.value;updateNoticePreview()"></div>';
+
+  // スタート
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">';
+  h += '<div class="frow"><label>OUTコース</label><input type="text" value="'+nd.startOUT+'" oninput="noticeData.startOUT=this.value;updateNoticePreview()"></div>';
+  h += '<div class="frow"><label>INコース</label><input type="text" value="'+nd.startIN+'" oninput="noticeData.startIN=this.value;updateNoticePreview()"></div>';
+  h += '<div class="frow"><label>スタート時刻</label><input type="text" value="'+nd.startTime+'" oninput="noticeData.startTime=this.value;updateNoticePreview()"></div>';
+  h += '</div>';
+
+  h += '<div class="frow"><label>朝礼時刻</label><input type="text" value="'+nd.morningTime+'" oninput="noticeData.morningTime=this.value;updateNoticePreview()"></div>';
+
+  h += '<div class="frow"><label>プレー費</label><input type="text" value="'+nd.playFee+'" oninput="noticeData.playFee=this.value;updateNoticePreview()"></div>';
+  h += '<div class="frow"><label>参加費</label><input type="text" value="'+nd.entryFee+'" oninput="noticeData.entryFee=this.value;updateNoticePreview()"></div>';
+
+  h += '<div class="frow"><label>返信期限（例: 2月 26日）</label><input type="text" value="'+nd.deadline+'" oninput="noticeData.deadline=this.value;updateNoticePreview()"></div>';
+
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+  h += '<div class="frow"><label>返信FAX</label><input type="text" value="'+nd.fax+'" oninput="noticeData.fax=this.value;updateNoticePreview()"></div>';
+  h += '<div class="frow"><label>返信メール</label><input type="text" value="'+nd.email+'" oninput="noticeData.email=this.value;updateNoticePreview()"></div>';
+  h += '</div>';
+
+  h += '<div class="frow"><label>注意事項①</label>';
+  h += '<textarea rows="2" oninput="noticeData.note1=this.value;updateNoticePreview()">'+nd.note1+'</textarea></div>';
+  h += '<div class="frow"><label>注意事項②</label>';
+  h += '<textarea rows="2" oninput="noticeData.note2=this.value;updateNoticePreview()">'+nd.note2+'</textarea></div>';
+
+  h += '</div></div>'; // card終わり
+
+  // 印刷・保存カード
+  const absCnt = CO.filter(c=>c.status!=='欠席').length;
+  h += '<div class="card">';
+  h += '<b style="font-size:13px">🖨️ 印刷・出力</b>';
+  h += '<div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">';
+  h += '<div style="font-size:12px;color:#666">送信管理の会社一覧から自動生成します</div>';
+  h += '<button class="btn g" style="width:100%" onclick="printNotice(\'single\')">📄 プレビューを印刷（1枚）</button>';
+  h += '<button class="btn b" style="width:100%" onclick="printNotice(\'all\')">📋 全社分を一括印刷（'+absCnt+'社）</button>';
+  h += '<hr style="border:none;border-top:1px solid #ddd;margin:2px 0">';
+  h += '<div style="font-size:11px;font-weight:bold;color:#555">📁 過去フォルダに保存</div>';
+  h += '<div style="display:flex;gap:6px;align-items:center">';
+  h += '<select id="notice-folder-sel" style="flex:1;padding:4px 6px;font-size:11px;border:1px solid var(--bd);border-radius:6px">';
+  h += '<option value="">-- 保存先フォルダを選択 --</option>';
+  h += folderOpts();
+  h += '</select>';
+  h += '<button class="btn g" onclick="saveNoticeToFolder()">💾 保存</button>';
+  h += '</div>';
+  h += '<div id="notice-saved-list" style="margin-top:4px;font-size:11px;color:#2e7d32"></div>';
+  h += '<hr style="border:none;border-top:1px solid #ddd;margin:2px 0">';
+  h += '<button class="btn" style="width:100%" onclick="resetNotice()">🔄 デフォルトに戻す</button>';
+  h += '</div></div>'; // card終わり
+
+  h += '</div>'; // 左カラム終わり
+
+  // ===== 右: プレビュー =====
+  h += '<div>';
+  h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+  h += '<b style="font-size:13px">👁️ プレビュー</b>';
+  h += '<span style="font-size:11px;color:#666">（実際の印刷と若干異なる場合があります）</span>';
+  h += '</div>';
+  h += '<div id="notice-preview-wrap" style="background:#fff;border:1px solid var(--bd);border-radius:8px;padding:0;overflow:auto;min-height:600px">';
+  h += '<div id="notice-preview"></div>';
+  h += '</div>';
+  h += '</div>'; // 右カラム終わり
+
+  h += '</div>'; // grid終わり
+
+  el.innerHTML = h;
+  updateNoticePreview();
+}
+
+function buildNoticeHTML(address, forPrint){
+  const nd = noticeData;
+  const addrLine = address || (nd.addressType==='individual' ? nd.addressIndividual : '各　位');
+  const printStyle = forPrint ? `
+    <style>
+      @page{size:A4;margin:15mm 18mm}
+      body{font-family:'MS明朝','ＭＳ 明朝',serif;font-size:11pt}
+      .notice-wrap{max-width:100%;padding:0}
+      @media print{.no-print{display:none}}
+    </style>` : '';
+
+  return `${printStyle}
+<div class="notice-wrap" style="font-family:'MS明朝','ＭＳ 明朝',serif;font-size:${forPrint?'11pt':'11px'};line-height:1.8;padding:${forPrint?'0':'24px 32px'};color:#000;max-width:640px;margin:0 auto">
+
+  <!-- 日付・宛先・差出人 -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+    <div style="font-size:${forPrint?'11pt':'11px'}">
+      <div style="font-size:${forPrint?'15pt':'15px'};font-weight:bold;margin-bottom:4px">${addrLine}</div>
+    </div>
+    <div style="text-align:right;font-size:${forPrint?'10pt':'10px'}">
+      ㈱宮崎工業　　幹事
+    </div>
+  </div>
+
+  <!-- 件名 -->
+  <div style="text-align:center;font-size:${forPrint?'14pt':'14px'};font-weight:bold;margin:12px 0 14px;letter-spacing:0.1em">
+    ゴルフコンペ開催について
+  </div>
+
+  <!-- 本文 -->
+  <div style="margin-bottom:10px;text-indent:1em">
+    拝啓　皆様におかれましてはますますご盛栄のこととお慶び申し上げます。
+  </div>
+  <div style="margin-bottom:6px;text-indent:1em">
+    さて、慰労と親睦を図る為、下記の予定で恒例の宮崎杯ゴルフコンペを計画しております。
+  </div>
+  <div style="margin-bottom:14px;text-indent:1em">
+    ご多忙中とは存じますが、皆様の多数のご参加をお待ちしております。
+  </div>
+
+  <div style="text-align:right;margin-bottom:2px">敬具</div>
+
+  <!-- 記 -->
+  <div style="text-align:center;font-weight:bold;font-size:${forPrint?'13pt':'13px'};margin:10px 0 14px;letter-spacing:0.2em">記</div>
+
+  <!-- 項目リスト -->
+  <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+    <tr>
+      <td style="width:90px;padding:5px 0;vertical-align:top;font-weight:bold">１、日　時</td>
+      <td style="padding:5px 0">
+        ${nd.date}　　（${nd.dateDay}）<br>
+        　ＡＭ　${nd.reception}　より受付開始
+      </td>
+    </tr>
+    <tr><td colspan="2" style="padding:2px 0"></td></tr>
+    <tr>
+      <td style="padding:5px 0;vertical-align:top;font-weight:bold">２、場　所</td>
+      <td style="padding:5px 0">
+        ${nd.venue}<br>
+        住所　　${nd.address}<br>
+        <br>
+        ＴＥＬ　　${nd.tel}
+      </td>
+    </tr>
+    <tr><td colspan="2" style="padding:2px 0"></td></tr>
+    <tr>
+      <td style="padding:5px 0;vertical-align:top;font-weight:bold">３、スタート</td>
+      <td style="padding:5px 0">
+        <table style="border-collapse:collapse">
+          <tr>
+            <td style="min-width:120px">${nd.startOUT}</td>
+            <td style="padding-left:8px">${nd.startTime}</td>
+            <td style="padding-left:24px;min-width:120px">${nd.startIN}</td>
+            <td style="padding-left:8px">${nd.startTime}</td>
+          </tr>
+          <tr>
+            <td>朝礼</td>
+            <td style="padding-left:8px">${nd.morningTime}</td>
+            <td></td><td></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr><td colspan="2" style="padding:2px 0"></td></tr>
+    <tr>
+      <td style="padding:5px 0;vertical-align:top;font-weight:bold">４、プレー費</td>
+      <td style="padding:5px 0">${nd.playFee}</td>
+    </tr>
+    <tr><td colspan="2" style="padding:2px 0"></td></tr>
+    <tr>
+      <td style="padding:5px 0;vertical-align:top;font-weight:bold">５、参加費</td>
+      <td style="padding:5px 0">${nd.entryFee}</td>
+    </tr>
+  </table>
+
+  <!-- 注意事項 -->
+  <div style="margin-bottom:4px">※${nd.note1}</div>
+  <div style="margin-bottom:14px">※${nd.note2}</div>
+
+  <div style="text-align:right;margin-bottom:20px">以上</div>
+
+  <!-- 切り取り線 -->
+  <div style="border-top:1px dashed #999;padding-top:10px;margin-top:4px">
+
+    <!-- 回答欄 -->
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px">
+      <b style="font-size:${forPrint?'12pt':'12px'}">御回答下さい</b>
+      <div style="display:flex;gap:8px">
+        <div style="border:1px solid #000;padding:3px 20px;font-weight:bold">参　加</div>
+        <div style="border:1px solid #000;padding:3px 20px">不参加</div>
+      </div>
+    </div>
+
+    <!-- 貴社名 -->
+    <div style="margin-bottom:8px">
+      <span style="display:inline-block;width:60px">貴社名</span>
+      <span style="display:inline-block;border-bottom:1px solid #000;width:420px">&nbsp;</span>
+    </div>
+
+    <!-- 注記 -->
+    <div style="font-size:${forPrint?'9pt':'10px'};margin-bottom:6px">※フルネーム・ベストスコアをご記入ください</div>
+
+    <!-- 氏名欄 ×4 -->
+    ${[1,2,3,4].map(i=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+      <span style="min-width:24px">氏名</span>
+      <span style="flex:1;border-bottom:1px solid #000;display:inline-block">&nbsp;</span>
+      <span style="margin:0 8px;font-size:${forPrint?'9pt':'10px'}">ベストスコア</span>
+      <span style="width:80px;border-bottom:1px solid #000;display:inline-block">&nbsp;</span>
+    </div>`).join('')}
+
+    <!-- 返信先 -->
+    <div style="margin-top:12px;font-size:${forPrint?'10pt':'11px'}">
+      返信先　FAX　${nd.fax}　／　メール　${nd.email}
+    </div>
+    <div style="font-size:${forPrint?'10pt':'11px'}">
+      組合せ選考の為、恐れ入りますが　${nd.deadline}　迄　に御連絡お願いします。
+    </div>
+  </div>
+
+</div>`;
+}
+
+function updateNoticePreview(){
+  document.getElementById('notice-preview').innerHTML =
+    buildNoticeHTML(null, false);
+}
+
+function printNotice(mode){
+  let html = '';
+  if(mode === 'single'){
+    const addrLine = noticeData.addressType==='individual'
+      ? noticeData.addressIndividual
+      : '各　位';
+    html = buildNoticeHTML(addrLine, true);
+  } else {
+    // 全社：欠席以外の会社ごとに1枚
+    const targets = CO.filter(c=>c.status!=='欠席');
+    html = targets.map((c,i)=>{
+      const pageBreak = i>0 ? '<div style="page-break-before:always"></div>' : '';
+      return pageBreak + buildNoticeHTML(c.company, true);
+    }).join('');
+  }
+  const w = window.open('','_blank','width=800,height=900');
+  w.document.write(`<!DOCTYPE html><html lang="ja"><head>
+    <meta charset="UTF-8">
+    <title>ゴルフコンペ案内文</title>
+    <style>
+      @page{size:A4;margin:15mm 18mm}
+      body{font-family:'MS明朝','ＭＳ 明朝',serif;font-size:11pt;color:#000}
+      @media print{.no-print{display:none}}
+      .notice-wrap{max-width:100%}
+    </style>
+  </head><body>
+    <div class="no-print" style="background:#1B5E20;color:#fff;padding:10px 16px;display:flex;align-items:center;gap:12px;font-family:sans-serif">
+      <span>🖨️ 宮崎工業杯 ゴルフコンペ案内文</span>
+      <button onclick="window.print()" style="margin-left:auto;background:#fff;color:#1B5E20;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;font-weight:bold">印刷する</button>
+      <button onclick="window.close()" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);padding:6px 16px;border-radius:4px;cursor:pointer">閉じる</button>
+    </div>
+    ${html}
+  </body></html>`);
+  w.document.close();
+}
+
+function resetNotice(){
+  noticeData = {...NOTICE_DEFAULTS};
+  renderNotice();
+}
+
+// 案内文を過去フォルダに保存
+function saveNoticeToFolder(){
+  const sel = document.getElementById('notice-folder-sel');
+  const fid = sel ? sel.value : '';
+  if(!fid){ alert('保存先フォルダを選択してください'); return; }
+  const folder = FOLDERS.find(f=>f.id===fid);
+  if(!folder){ alert('フォルダが見つかりません'); return; }
+
+  const label = noticeData.round + ' 案内文（' + noticeData.date + '）';
+  // 既存の案内文ファイルがあれば上書き確認
+  const existing = folder.files.findIndex(f=>f.type==='notice');
+  if(existing>=0){
+    if(!confirm('フォルダにすでに案内文が保存されています。上書きしますか？')) return;
+    folder.files.splice(existing, 1);
+  }
+  folder.files.push({
+    type: 'notice',
+    label: label,
+    data: JSON.parse(JSON.stringify(noticeData)), // ディープコピー
+    savedAt: new Date().toISOString()
+  });
+  sv();
+
+  // 保存完了メッセージ
+  const msgEl = document.getElementById('notice-saved-list');
+  if(msgEl) msgEl.textContent = '✅ ' + folder.name + ' に保存しました';
+  setTimeout(()=>{ if(msgEl) msgEl.textContent=''; }, 3000);
+}
+
+// 過去フォルダから案内文を読み込む
+function loadNoticeFromFolder(fid, idx){
+  const folder = FOLDERS.find(f=>f.id===fid);
+  if(!folder) return;
+  const fi = folder.files[idx];
+  if(!fi || fi.type!=='notice') return;
+  if(!confirm('「' + fi.label + '」の設定を読み込みますか？\n現在の設定は上書きされます。')) return;
+  noticeData = {...NOTICE_DEFAULTS, ...fi.data};
+  // 案内文タブに切り替えてプレビュー更新
+  const noticeTab = document.querySelector('[onclick*="notice"]');
+  if(noticeTab) ST('notice', noticeTab);
+  else renderNotice();
+  alert('案内文を読み込みました。「案内文作成」タブで確認してください。');
+}
+
+// =============================================
+// === 初期化 ===
+// =============================================
+ld();
+// 第19回の順位データからスコアを参加者に反映
+const r19=FOLDERS.find(f=>f.id==='f19')?.files.find(f=>f.type==='ranking')?.data||[];
+r19.forEach(d=>{
+  const p=P.find(x=>norm(x.name)===norm(d.name));
+  if(p&&(!p.score||p.score===100))p.score=d.score;
+});
+updateCoFilterM();
+renderM();
+renderDash();
+document.getElementById('th-no').className='asc';
+</script>
+</body>
+</html>
