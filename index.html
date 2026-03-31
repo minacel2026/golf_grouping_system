@@ -1717,15 +1717,27 @@ function generate(){
   }
   pool.sort((a,b)=>getS(a)-getS(b));
 
-  // ③ 固定グループが3人未満の場合はpoolから補充
+  // ③ 固定グループが4人未満なら補充
+  //    スコア均等・同会社回避・過去ペア回避・毎回多様（上位3候補からランダム選択）
+  const allSc=ac.filter(p=>p.score&&p.score>60);
+  const overallAvg=allSc.length?allSc.reduce((s,p)=>s+getS(p),0)/allSc.length:100;
+
   grps.forEach((g,gi)=>{
     if(!fixedGrpIdx.has(gi))return;
     while(g.length<4&&pool.length>0){
-      // スコアが最も近い人を補充
-      const avg=gAvg(g);
-      let bestIdx=0,bestDiff=Infinity;
-      pool.forEach((p,pi)=>{const diff=Math.abs(getS(p)-avg);if(diff<bestDiff){bestDiff=diff;bestIdx=pi;}});
-      const p=pool.splice(bestIdx,1)[0];
+      // 各候補のペナルティを計算
+      const scored=pool.map((p,pi)=>{
+        let pen=0;
+        const newAvg=(g.reduce((s,x)=>s+getS(x),0)+getS(p))/(g.length+1);
+        pen+=Math.abs(newAvg-overallAvg)*200; // スコア均等化
+        if(g.some(x=>x.company===p.company))pen+=50000; // 同会社回避
+        g.forEach(x=>{pen+=getPP(x.name,p.name);}); // 過去ペア回避
+        return {pi,pen};
+      }).sort((a,b)=>a.pen-b.pen);
+      // 上位3候補からランダム選択（毎回違う人が入る）
+      const topK=Math.min(3,scored.length);
+      const chosen=scored[Math.floor(Math.random()*topK)].pi;
+      const p=pool.splice(chosen,1)[0];
       g.push(p);placed.add(p.id);
     }
   });
