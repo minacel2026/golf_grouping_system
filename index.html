@@ -365,6 +365,7 @@ input[type=range]{width:100%;accent-color:var(--g2)}
       </select>
     </label>
     <button class="btn" onclick="expCSV()">📥 CSV出力</button>
+    <button class="btn" onclick="expXLSX()" style="background:#217346;color:#fff">📊 Excel出力</button>
     <button class="btn p" onclick="saveRes()">💾 この結果を過去データに保存</button>
     <span id="ginfo" style="font-size:11px;color:#666"></span>
   </div>
@@ -411,7 +412,7 @@ input[type=range]{width:100%;accent-color:var(--g2)}
     <div class="frow"><label>GROSSスコア</label>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <input type="number" id="fSc" value="100" min="60" max="200" style="width:80px">
-        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;padding:3px 8px;border:1px solid var(--bd);border-radius:5px" id="initLbl">
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;padding:3px 8px;border:1px solid var(--bd);border-radius:5px">
           <input type="checkbox" id="fInit" style="accent-color:var(--g2)" onchange="onInitChg(this)"> 初参加（スコア100）
         </label>
       </div>
@@ -1022,7 +1023,7 @@ function renderM(){
           <input type="number" value="${p.isInit?100:p.score||''}" min="60" max="200"
             style="width:58px;padding:2px 4px;font-size:11px;border:1px solid ${p.isInit?'var(--g2)':noScore?'#ffcc02':p.score>130?'#ef9a9a':'var(--bd)'};border-radius:4px;${p.isInit?'background:#e8f5e9':''}"
             ${p.isInit?'disabled':''} onchange="updSc(${p.id},this.value)">
-          ${p.isInit?'<span style="font-size:10px;color:var(--g2);font-weight:bold;white-space:nowrap">初</span>':''}
+          ${p.isInit?'<span style="font-size:10px;color:var(--g2);font-weight:bold">初</span>':''}
         </div>
       </td>
       <td>${pc>0?`<span class="bdg pa">同組${pc}回</span>`:'<span style="color:#ccc;font-size:10px">なし</span>'}</td>
@@ -1045,11 +1046,7 @@ function syncToSend(pid){
     co.status='欠席';
   }
 }
-function onInitChg(el){
-  const scEl=document.getElementById('fSc');
-  if(el.checked){scEl.value=100;scEl.disabled=true;}
-  else{scEl.disabled=false;scEl.value=100;}
-}
+function onInitChg(el){const sc=document.getElementById('fSc');if(el.checked){sc.value=100;sc.disabled=true;}else{sc.disabled=false;sc.value=100;}}
 function updNo(id,v){P.find(p=>p.id===id).no=v?parseInt(v):null;sv();}
 function autoNo(){
   const sorted=[...P].filter(p=>p.attend).sort(getSort);
@@ -1058,11 +1055,7 @@ function autoNo(){
   renderM();sv();
   alert('No.を割り当てました（'+sorted.length+'名）');
 }
-function updSc(id,v){
-  const p=P.find(x=>x.id===id);
-  if(p.isInit){p.score=100;}else{p.score=parseInt(v)||100;}
-  sv();
-}
+function updSc(id,v){const p=P.find(x=>x.id===id);if(p.isInit){p.score=100;}else{p.score=parseInt(v)||100;}sv();}
 function togAll(){const n=P.filter(p=>p.attend).length;P.forEach(p=>p.attend=n<P.length?1:0);renderM();sv();}
 function openAdd(){
   eid=null;
@@ -1092,10 +1085,7 @@ function savePl(){
   const name=document.getElementById('fNm').value.trim();
   if(!name){alert('氏名を入力してください');return;}
   const isInit=document.getElementById('fInit').checked;
-  const d={name,company:document.getElementById('fCo').value.trim(),
-    score:isInit?100:parseInt(document.getElementById('fSc').value)||100,
-    isInit:isInit,
-    attend:parseInt(document.getElementById('fAt').value),no:parseInt(document.getElementById('fNo').value)||null};
+  const d={name,company:document.getElementById('fCo').value.trim(),score:isInit?100:parseInt(document.getElementById('fSc').value)||100,isInit:isInit,attend:parseInt(document.getElementById('fAt').value),no:parseInt(document.getElementById('fNo').value)||null};
   if(eid)Object.assign(P.find(p=>p.id===eid),d);
   else P.push({id:nid++,...d});
   cm('addM');updateCoFilterM();
@@ -1696,7 +1686,6 @@ function generate(){
   const hasPast=Object.keys(PH).length>0;
   const doBalance=!!(document.getElementById('chkBalance')?.checked);
 
-  // ヘルパー：初参加(isInit)も100点として計算
   const getS=p=>p.isInit?100:(p.score&&p.score>60)?p.score:100;
   const gAvg=g=>g.length?g.reduce((s,p)=>s+getS(p),0)/g.length:100;
   const isLEEGrp=g=>g.some(p=>p.company.includes('LEE')||p.company.includes('ＬＥＥ'));
@@ -1713,7 +1702,7 @@ function generate(){
     });
   });
 
-  // ② Fisher-Yatesシャッフル→スコア昇順ソート（再生成のたびに違うメンバー）
+  // ② Fisher-Yatesシャッフル→スコア昇順（再生成のたびに違うメンバー）
   const pool=[...ac].filter(p=>!placed.has(p.id));
   for(let i=pool.length-1;i>0;i--){
     const j=Math.floor(Math.random()*(i+1));
@@ -1730,7 +1719,7 @@ function generate(){
     gi+=d;if(gi>=ng){gi=ng-1;d=-1;}else if(gi<0){gi=0;d=1;}
   });
 
-  // ④ 統合ペナルティスワップ（同会社・女性重複・過去ペア・スコア偏差を同時最小化）
+  // ④ 統合ペナルティスワップ
   function grpPen(g,globalAvg){
     let p=0;
     for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){
@@ -1768,7 +1757,6 @@ function generate(){
 
   GR=grps.filter(g=>g.length>0);
 
-  // ⑤ 結果表示
   const avgs=GR.map(g=>Math.round(gAvg(g)));
   const maxA=Math.max(...avgs),minA=Math.min(...avgs);
   const coWarn=GR.filter(g=>g.some((p,i)=>g.some((q,j)=>j>i&&p.company===q.company))).length;
@@ -1865,6 +1853,110 @@ function expCSV(){
 // =============================================
 // === 過去フォルダ ===
 // =============================================
+// ===== Excel出力（配布用組み合わせ表）=====
+function expXLSX(){
+  if(!GR||!GR.length){alert('先に組み合わせを生成してください');return;}
+
+  // コース・スタート時間設定
+  // 1〜8組:つつじ、9〜16組:くすの木（8:44〜9:40、8分刻み）
+  const COURSES=['つつじ','くすの木'];
+  const TIMES=['08:44','08:52','09:00','09:08','09:16','09:24','09:32','09:40'];
+
+  // イベント名取得
+  const evtTag=document.getElementById('event-tag')?.textContent||'宮崎工業杯';
+
+  // ワークブック作成
+  const wb=XLSX.utils.book_new();
+
+  // ===== ヘッダー部分（1〜13行）=====
+  const rows=[];
+  rows.push([evtTag,'','','','','','','','','','','','','','']);
+  rows.push(['組み合せ表','','','','','','','','','','','','','','']);
+  rows.push(['開催地','','','','','','','','','','','','','','']);
+  rows.push(['プレー日','','','','','','','','','','','','','','']);
+  rows.push(['スタート時間','','','','','','','','','','','','','','']);
+  rows.push(['','','','','','','','','','','','','','','']);
+  rows.push(['集合時間','','','','','','','','','','','','','','']);
+  rows.push(['コンペ名','','宮崎工業杯','','','','','','','','','','','','']);
+  rows.push(['受付時間','','','','','','','','','','','','','','']);
+  rows.push(['','','','','','','','','','','','','','','']);
+  rows.push(['','','','','','','','','','','','','','','']);
+  // 行12: ヘッダー
+  rows.push(['','スタート時間','氏　　名','会社名','前回スコア','氏　　名','会社名','前回スコア','','最少','','','','名前','社名']);
+
+  // ===== 組み合わせデータ =====
+  const merges=[];
+
+  GR.forEach((grp,gi)=>{
+    const gno=gi+1;
+    const courseIdx=gi<8?0:1;
+    const timeIdx=gi%8;
+    const course=COURSES[courseIdx];
+    const time=TIMES[timeIdx];
+    const baseExcelRow=14+gi*2; // Excel行番号(1-indexed)
+    const baseArrIdx=rows.length; // 配列インデックス
+
+    // メンバー取得（最大4人）
+    const m=idx=>grp[idx]||{name:'',company:'',score:null,isInit:false};
+    const sc=p=>{
+      if(!p||!p.name)return '';
+      if(p.isInit)return '初';
+      return(p.score&&p.score>60)?p.score:'';
+    };
+
+    // 行1: 組番号、コース、メンバー1・2
+    rows.push([
+      gno, course,
+      m(0).name, m(0).company, sc(m(0)),
+      m(1).name, m(1).company, sc(m(1)),
+      '', '最少', '','','','',''
+    ]);
+
+    // 行2: 時刻、メンバー3・4、平均/最少数式
+    const r1=baseExcelRow, r2=baseExcelRow+1;
+    rows.push([
+      '', time,
+      m(2).name, m(2).company, sc(m(2)),
+      m(3).name, m(3).company, sc(m(3)),
+      `=AVERAGE(E${r1}:H${r2})`,
+      `=MIN(E${r1}:H${r2})`,
+      '','','','',''
+    ]);
+
+    // A列マージ（2行を1セルに）
+    merges.push({s:{r:baseArrIdx,c:0},e:{r:baseArrIdx+1,c:0}});
+  });
+
+  // 区切り行
+  rows.push(['','つつじ→くすの木','','','','くすの木→こぶし','','','','','','','','','']);
+  rows.push(['','','','','※協賛品歓迎いたします。','','','','','','','','','','']);
+
+  // シート作成
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!merges']=merges;
+
+  // 列幅設定（見やすさのため）
+  ws['!cols']=[
+    {wch:4},  // A: 組番号
+    {wch:12}, // B: スタート時間
+    {wch:14}, // C: 氏名
+    {wch:20}, // D: 会社名
+    {wch:8},  // E: スコア
+    {wch:14}, // F: 氏名
+    {wch:20}, // G: 会社名
+    {wch:8},  // H: スコア
+    {wch:8},  // I: 平均
+    {wch:8},  // J: 最少
+  ];
+
+  XLSX.utils.book_append_sheet(wb,ws,'組み合わせ');
+
+  // ファイル名に回次とイベント名を含める
+  const fname='組み合わせ_'+evtTag.replace(/[\/\\:*?"<>|]/g,'_')+'.xlsx';
+  XLSX.writeFile(wb,fname);
+}
+
+
 function renderFolders(){
   const nav=document.getElementById('folder-nav');
   const view=document.getElementById('folder-view');
