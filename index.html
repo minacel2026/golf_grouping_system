@@ -1682,8 +1682,8 @@ function generate(){
   const ac=P.filter(p=>p.attend);
   if(ac.length<4){alert('参加者が4人未満です');return;}
   const ngSel=document.getElementById('ngSel').value;
-  // autoの場合: floor(n/3)で必ず3人以上を保証
-  const ngRaw=ngSel==='auto'?Math.min(15,Math.floor(ac.length/3)):parseInt(ngSel);
+  // autoの場合: ceil(n/4)で最大4人/組を保証
+  const ngRaw=ngSel==='auto'?Math.min(15,Math.ceil(ac.length/4)):parseInt(ngSel);
   const ng=Math.max(1,ngRaw);
   const hasPast=Object.keys(PH).length>0;
   const doBalance=!!(document.getElementById('chkBalance')?.checked);
@@ -1757,13 +1757,17 @@ function generate(){
     }
   }
 
-  // 2人以下の組を隣の組にマージして3人以上を保証
+  // 3人未満の組に4人組から1人移動（3〜4人/組を保証）
   let merged=grps.filter(g=>g.length>0);
   let mchg=true;
   while(mchg){
     mchg=false;
     for(let i=0;i<merged.length;i++){
       if(merged[i].length>=3)continue;
+      // 4人以上の組から1人移動して3人に
+      const donor=merged.find((g,gi)=>gi!==i&&g.length>=4);
+      if(donor){merged[i].push(donor.pop());mchg=true;break;}
+      // 4人組なし(n=5等)→マージ（やむなし）
       const big=merged.reduce((a,b,bi)=>b.length>a.length&&bi!==i?b:a,merged[0]);
       big.push(...merged[i]);merged.splice(i,1);mchg=true;break;
     }
