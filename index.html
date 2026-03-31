@@ -408,7 +408,14 @@ input[type=range]{width:100%;accent-color:var(--g2)}
     <input type="hidden" id="fNo" value="">
     <div class="frow"><label>氏名（女性は末尾に★）</label><input type="text" id="fNm" placeholder="例: 鈴木 花子★"></div>
     <div class="frow"><label>会社名</label><input type="text" id="fCo"></div>
-    <div class="frow"><label>GROSSスコア</label><input type="number" id="fSc" value="100" min="60" max="200"></div>
+    <div class="frow"><label>GROSSスコア</label>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <input type="number" id="fSc" value="100" min="60" max="200" style="width:80px">
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;padding:3px 8px;border:1px solid var(--bd);border-radius:5px" id="initLbl">
+          <input type="checkbox" id="fInit" style="accent-color:var(--g2)" onchange="onInitChg(this)"> 初参加（スコア100）
+        </label>
+      </div>
+    </div>
     <div class="frow"><label>参加状況</label>
       <select id="fAt"><option value="1">参加</option><option value="0">欠席</option></select></div>
     <div class="mbtns">
@@ -757,29 +764,21 @@ let sortCol='no', sortDir=1;
 // =============================================
 
 // === Supabase クラウド同期 ===
-const SB_URL='https://dyqubppibpmpfkuvgvtr.supabase.co';
-const SB_KEY='sb_publishable_xtog4A5mlJPAPHsc35xulQ_p5KG32dD';
+const SB_URL='https://dyqubppibpmpfkuvgvtr.supabase.co';const SB_KEY='sb_publishable_xtog4A5mlJPAPHsc35xulQ_p5KG32dD';
 let _sb=null;
-try{_sb=window.supabase.createClient(SB_URL,SB_KEY);}catch(e){console.warn('SB init',e);}
-
-function setSyncSt(msg,color){
-  const el=document.getElementById('sync-st');
-  if(el){el.textContent=msg;el.style.background=color||'rgba(255,255,255,.2)';}
-}
-
+try{_sb=window.supabase.createClient(SB_URL,SB_KEY);}catch(e){console.warn('SB',e);}
+function setSyncSt(msg,color){const el=document.getElementById('sync-st');if(el){el.textContent=msg;el.style.background=color||'rgba(255,255,255,.2)';}}
 async function sv(){
   const data={P,CO,FX,PH,SESSIONS,FOLDERS,PM,fgid,coid,nid};
   try{localStorage.setItem('golfDataV2',JSON.stringify(data));}catch(e){}
   if(!_sb){setSyncSt('💾 ローカル保存','rgba(230,81,0,.6)');return;}
   try{
     setSyncSt('💾 保存中...','rgba(230,81,0,.6)');
-    const {error}=await _sb.from('golf_data').upsert(
-      {key:'main',value:data,updated_at:new Date().toISOString()},{onConflict:'key'});
+    const {error}=await _sb.from('golf_data').upsert({key:'main',value:data,updated_at:new Date().toISOString()},{onConflict:'key'});
     if(error)throw error;
     setSyncSt('✅ 同期済み','rgba(46,125,50,.7)');
   }catch(e){setSyncSt('⚠️ ローカルのみ','rgba(230,81,0,.6)');}
 }
-
 async function ld(){
   let data=null;
   if(_sb){
@@ -795,14 +794,7 @@ async function ld(){
       if(s){data=JSON.parse(s);setSyncSt('📱 ローカル読込','rgba(96,125,139,.7)');}
       else{
         const pOld=localStorage.getItem('gP');
-        if(pOld){
-          data={P:JSON.parse(pOld),CO:JSON.parse(localStorage.getItem('gCO')||'[]'),
-            FX:JSON.parse(localStorage.getItem('gFX')||'[]'),PH:JSON.parse(localStorage.getItem('gPH')||'{}'),
-            SESSIONS:JSON.parse(localStorage.getItem('gSS')||'[]'),FOLDERS:JSON.parse(localStorage.getItem('gFO')||'[]'),
-            PM:parseInt(localStorage.getItem('gPM')||'3'),fgid:parseInt(localStorage.getItem('gFgid')||'3'),
-            coid:parseInt(localStorage.getItem('gCoid')||'40')};
-          setSyncSt('📦 旧データ移行','rgba(230,81,0,.6)');
-        }
+        if(pOld){data={P:JSON.parse(pOld),CO:JSON.parse(localStorage.getItem('gCO')||'[]'),FX:JSON.parse(localStorage.getItem('gFX')||'[]'),PH:JSON.parse(localStorage.getItem('gPH')||'{}'),SESSIONS:JSON.parse(localStorage.getItem('gSS')||'[]'),FOLDERS:JSON.parse(localStorage.getItem('gFO')||'[]'),PM:parseInt(localStorage.getItem('gPM')||'3'),fgid:parseInt(localStorage.getItem('gFgid')||'3'),coid:parseInt(localStorage.getItem('gCoid')||'40')};setSyncSt('📦 旧データ移行','rgba(230,81,0,.6)');}
       }
     }catch(e){}
   }
@@ -810,29 +802,15 @@ async function ld(){
   try{
     if(data.P&&data.P.length){P=data.P;nid=Math.max(...P.map(x=>x.id))+1;}
     if(data.CO&&data.CO.length){CO=data.CO;coid=Math.max(...CO.map(x=>x.id))+1;}
-    if(data.FX)FX=data.FX;
-    if(data.fgid)fgid=data.fgid;
-    if(data.coid)coid=data.coid;
-    if(data.nid)nid=data.nid;
-    if(data.PH)PH=data.PH;
-    if(data.SESSIONS)SESSIONS=data.SESSIONS;
-    if(data.FOLDERS)FOLDERS=data.FOLDERS;
+    if(data.FX)FX=data.FX;if(data.fgid)fgid=data.fgid;if(data.coid)coid=data.coid;if(data.nid)nid=data.nid;
+    if(data.PH)PH=data.PH;if(data.SESSIONS)SESSIONS=data.SESSIONS;if(data.FOLDERS)FOLDERS=data.FOLDERS;
     if(data.PM){PM=data.PM;const ps=document.getElementById('psl');if(ps)ps.value=PM;const pd=document.getElementById('pdis');if(pd)pd.textContent=PM;}
   }catch(e){console.warn('data apply',e);}
-  if(_sb){
-    _sb.channel('golf-rt').on('postgres_changes',
-      {event:'UPDATE',schema:'public',table:'golf_data'},payload=>{
-        const d=payload.new?.value;if(!d)return;
-        setSyncSt('🔄 更新受信...','rgba(21,101,192,.6)');
-        try{
-          if(d.P){P=d.P;nid=Math.max(...P.map(x=>x.id))+1;}
-          if(d.CO)CO=d.CO;if(d.FX)FX=d.FX;if(d.PH)PH=d.PH;
-          if(d.SESSIONS)SESSIONS=d.SESSIONS;if(d.FOLDERS)FOLDERS=d.FOLDERS;
-        }catch(e){}
-        const t=document.querySelector('.tab.on');if(t)t.click();
-        setSyncSt('✅ 同期済み','rgba(46,125,50,.7)');
-      }).subscribe();
-  }
+  if(_sb){_sb.channel('golf-rt').on('postgres_changes',{event:'UPDATE',schema:'public',table:'golf_data'},payload=>{
+    const d=payload.new?.value;if(!d)return;setSyncSt('🔄 更新受信...','rgba(21,101,192,.6)');
+    try{if(d.P){P=d.P;nid=Math.max(...P.map(x=>x.id))+1;}if(d.CO)CO=d.CO;if(d.FX)FX=d.FX;if(d.PH)PH=d.PH;if(d.SESSIONS)SESSIONS=d.SESSIONS;if(d.FOLDERS)FOLDERS=d.FOLDERS;}catch(e){}
+    const t=document.querySelector('.tab.on');if(t)t.click();setSyncSt('✅ 同期済み','rgba(46,125,50,.7)');
+  }).subscribe();}
 }
 
 // =============================================
@@ -860,7 +838,7 @@ function renderDash(){
   const sent=CO.filter(c=>c.status!=='未送信').length;
   const replied=CO.filter(c=>c.status==='回答済み'||c.status==='欠席').length;
   const ac=P.filter(p=>p.attend);
-  const withScore=ac.filter(p=>p.score&&p.score!==100).length;
+  const withScore=ac.filter(p=>p.isInit||(p.score&&p.score!==100)).length;
 
   document.getElementById('db-sent').textContent=sent;
   document.getElementById('db-total-co').textContent=totalCo;
@@ -1032,14 +1010,21 @@ function renderM(){
   }).sort(getSort);
   document.getElementById('mbody').innerHTML=list.map(p=>{
     const f=isF(p.name),pc=pastCnt(p.name);
-    const noScore=!p.score||p.score===100;
+    const noScore=(!p.score||p.score===100)&&!p.isInit;
     return`<tr class="${f&&p.attend?'fr':''} ${!p.attend?'abs':''}">
       <td><input type="checkbox" ${p.attend?'checked':''} onchange="togAtt(${p.id},this.checked)"></td>
       <td style="text-align:center;font-weight:bold;font-size:13px;color:${p.no?'var(--g2)':' #ccc'}">${p.no||'—'}</td>
       <td><b>${p.name}</b>${f?' <span class="bdg f">★</span>':''}</td>
       <td style="color:#666;font-size:11px">${p.company}</td>
       <td>${f?'女':'男'}</td>
-      <td><input type="number" value="${p.score||''}" min="60" max="200" style="width:60px;padding:2px 4px;font-size:11px;border:1px solid ${noScore?'#ffcc02':p.score>130?'#ef9a9a':'var(--bd)'};border-radius:4px" onchange="updSc(${p.id},this.value)"></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:3px">
+          <input type="number" value="${p.isInit?100:p.score||''}" min="60" max="200"
+            style="width:58px;padding:2px 4px;font-size:11px;border:1px solid ${p.isInit?'var(--g2)':noScore?'#ffcc02':p.score>130?'#ef9a9a':'var(--bd)'};border-radius:4px;${p.isInit?'background:#e8f5e9':''}"
+            ${p.isInit?'disabled':''} onchange="updSc(${p.id},this.value)">
+          ${p.isInit?'<span style="font-size:10px;color:var(--g2);font-weight:bold;white-space:nowrap">初</span>':''}
+        </div>
+      </td>
       <td>${pc>0?`<span class="bdg pa">同組${pc}回</span>`:'<span style="color:#ccc;font-size:10px">なし</span>'}</td>
       <td><button class="btn sm" onclick="editP(${p.id})">編集</button> <button class="btn sm r" onclick="delP(${p.id})">削除</button></td>
     </tr>`;
@@ -1060,6 +1045,11 @@ function syncToSend(pid){
     co.status='欠席';
   }
 }
+function onInitChg(el){
+  const scEl=document.getElementById('fSc');
+  if(el.checked){scEl.value=100;scEl.disabled=true;}
+  else{scEl.disabled=false;scEl.value=100;}
+}
 function updNo(id,v){P.find(p=>p.id===id).no=v?parseInt(v):null;sv();}
 function autoNo(){
   const sorted=[...P].filter(p=>p.attend).sort(getSort);
@@ -1068,12 +1058,19 @@ function autoNo(){
   renderM();sv();
   alert('No.を割り当てました（'+sorted.length+'名）');
 }
-function updSc(id,v){P.find(p=>p.id===id).score=parseInt(v)||100;sv();}
+function updSc(id,v){
+  const p=P.find(x=>x.id===id);
+  if(p.isInit){p.score=100;}else{p.score=parseInt(v)||100;}
+  sv();
+}
 function togAll(){const n=P.filter(p=>p.attend).length;P.forEach(p=>p.attend=n<P.length?1:0);renderM();sv();}
 function openAdd(){
   eid=null;
   document.getElementById('addT').textContent='参加者を追加';
   ['fNo','fNm','fCo'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('fInit').checked=false;
+  document.getElementById('fSc').disabled=false;
+  document.getElementById('fSc').value=100;
   document.getElementById('fSc').value='100';
   document.getElementById('fAt').value=1;
   document.getElementById('addM').style.display='flex';
@@ -1085,14 +1082,20 @@ function editP(id){
   document.getElementById('fNo').value=p.no||'';
   document.getElementById('fNm').value=p.name;
   document.getElementById('fCo').value=p.company;
-  document.getElementById('fSc').value=p.score||'';
+  document.getElementById('fSc').value=p.isInit?100:p.score||'';
+  document.getElementById('fSc').disabled=!!p.isInit;
+  document.getElementById('fInit').checked=!!p.isInit;
   document.getElementById('fAt').value=p.attend;
   document.getElementById('addM').style.display='flex';
 }
 function savePl(){
   const name=document.getElementById('fNm').value.trim();
   if(!name){alert('氏名を入力してください');return;}
-  const d={name,company:document.getElementById('fCo').value.trim(),score:parseInt(document.getElementById('fSc').value)||100,attend:parseInt(document.getElementById('fAt').value),no:parseInt(document.getElementById('fNo').value)||null};
+  const isInit=document.getElementById('fInit').checked;
+  const d={name,company:document.getElementById('fCo').value.trim(),
+    score:isInit?100:parseInt(document.getElementById('fSc').value)||100,
+    isInit:isInit,
+    attend:parseInt(document.getElementById('fAt').value),no:parseInt(document.getElementById('fNo').value)||null};
   if(eid)Object.assign(P.find(p=>p.id===eid),d);
   else P.push({id:nid++,...d});
   cm('addM');updateCoFilterM();
@@ -1130,7 +1133,7 @@ function renderSum(){
       <td><b>${p.name}</b>${f?' <span class="bdg f">★</span>':''}</td>
       <td style="font-size:11px;color:#666">${p.company}</td>
       <td>${f?'女':'男'}</td>
-      <td>${p.score&&p.score!==100?p.score:'未入力'}</td></tr>`;
+      <td>${p.isInit?'<span style="color:var(--g2);font-weight:bold">初(100)</span>':(p.score&&p.score!==100?p.score:'未入力')}</td></tr>`;
   }).join('');
 }
 function expSumCSV(){
@@ -1693,8 +1696,8 @@ function generate(){
   const hasPast=Object.keys(PH).length>0;
   const doBalance=!!(document.getElementById('chkBalance')?.checked);
 
-  // ヘルパー
-  const getS=p=>(p.score&&p.score>60)?p.score:100;
+  // ヘルパー：初参加(isInit)も100点として計算
+  const getS=p=>p.isInit?100:(p.score&&p.score>60)?p.score:100;
   const gAvg=g=>g.length?g.reduce((s,p)=>s+getS(p),0)/g.length:100;
   const isLEEGrp=g=>g.some(p=>p.company.includes('LEE')||p.company.includes('ＬＥＥ'));
   const fixedIds=new Set(FX.flatMap(fx=>fx.ids));
@@ -1710,7 +1713,7 @@ function generate(){
     });
   });
 
-  // ② Fisher-Yatesシャッフル→スコア昇順ソート（再生成のたびに違うメンバー構成）
+  // ② Fisher-Yatesシャッフル→スコア昇順ソート（再生成のたびに違うメンバー）
   const pool=[...ac].filter(p=>!placed.has(p.id));
   for(let i=pool.length-1;i>0;i--){
     const j=Math.floor(Math.random()*(i+1));
@@ -1718,7 +1721,7 @@ function generate(){
   }
   pool.sort((a,b)=>getS(a)-getS(b));
 
-  // ③ スネーク配置（スコア昇順→蛇行→各組に上位・中位・下位が均等に分散）
+  // ③ スネーク配置
   let d=1,gi=0;
   pool.forEach(p=>{
     const g=grps[gi];
