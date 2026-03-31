@@ -1720,7 +1720,7 @@ function generate(){
   // ③ 固定グループが3人未満の場合はpoolから補充
   grps.forEach((g,gi)=>{
     if(!fixedGrpIdx.has(gi))return;
-    while(g.length<3&&pool.length>0){
+    while(g.length<4&&pool.length>0){
       // スコアが最も近い人を補充
       const avg=gAvg(g);
       let bestIdx=0,bestDiff=Infinity;
