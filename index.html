@@ -154,7 +154,7 @@ input[type=range]{width:100%;accent-color:var(--g2)}
   <span style="font-size:18px">⛳</span>
   <h1>宮崎工業杯 コンペ管理システム</h1>
   <span class="event-tag" id="event-tag">第21回 2026.4.12</span>
-  <span id="sync-st" style="margin-left:8px;font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.2)">🔄 接続中</span>
+  <span id="sync-st" style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.2)">🔄 接続中</span>
   <span style="margin-left:auto;font-size:10px;opacity:.8">★=女性</span>
 </div>
 
@@ -756,122 +756,82 @@ let sortCol='no', sortDir=1;
 // === localStorage ===
 // =============================================
 
-// =============================================
 // === Supabase クラウド同期 ===
-// =============================================
 const SB_URL='https://dyqubppibpmpfkuvgvtr.supabase.co';
 const SB_KEY='sb_publishable_xtog4A5mlJPAPHsc35xulQ_p5KG32dD';
 let _sb=null;
-try{
-  _sb=window.supabase.createClient(SB_URL,SB_KEY);
-}catch(e){console.warn('Supabase init failed',e);}
+try{_sb=window.supabase.createClient(SB_URL,SB_KEY);}catch(e){console.warn('SB init',e);}
 
 function setSyncSt(msg,color){
   const el=document.getElementById('sync-st');
-  if(!el)return;
-  el.textContent=msg;
-  el.style.background=color?color:'rgba(255,255,255,.2)';
+  if(el){el.textContent=msg;el.style.background=color||'rgba(255,255,255,.2)';}
 }
 
-// 全データをまとめてSupabase＋localStorageに保存
 async function sv(){
   const data={P,CO,FX,PH,SESSIONS,FOLDERS,PM,fgid,coid,nid};
-  // localStorageにも保存（バックアップ）
   try{localStorage.setItem('golfDataV2',JSON.stringify(data));}catch(e){}
-  // Supabaseに保存
   if(!_sb){setSyncSt('💾 ローカル保存','rgba(230,81,0,.6)');return;}
   try{
     setSyncSt('💾 保存中...','rgba(230,81,0,.6)');
     const {error}=await _sb.from('golf_data').upsert(
-      {key:'main',value:data,updated_at:new Date().toISOString()},
-      {onConflict:'key'}
-    );
+      {key:'main',value:data,updated_at:new Date().toISOString()},{onConflict:'key'});
     if(error)throw error;
     setSyncSt('✅ 同期済み','rgba(46,125,50,.7)');
-  }catch(e){
-    setSyncSt('⚠️ ローカルのみ','rgba(230,81,0,.6)');
-    console.warn('Supabase save error:',e);
-  }
+  }catch(e){setSyncSt('⚠️ ローカルのみ','rgba(230,81,0,.6)');}
 }
 
-// Supabase→localStorage の順でデータを読込
 async function ld(){
   let data=null;
-  // Supabaseから取得
   if(_sb){
     try{
       setSyncSt('🔄 読込中...','rgba(21,101,192,.6)');
-      const {data:rows,error}=await _sb.from('golf_data')
-        .select('value').eq('key','main').maybeSingle();
+      const {data:rows,error}=await _sb.from('golf_data').select('value').eq('key','main').maybeSingle();
       if(!error&&rows){data=rows.value;setSyncSt('☁️ クラウド読込','rgba(46,125,50,.7)');}
-    }catch(e){console.warn('Supabase load error:',e);}
+    }catch(e){console.warn('SB load',e);}
   }
-  // Supabaseになければlocalからフォールバック
   if(!data){
     try{
       const s=localStorage.getItem('golfDataV2');
       if(s){data=JSON.parse(s);setSyncSt('📱 ローカル読込','rgba(96,125,139,.7)');}
       else{
-        // 旧キーからも試みる
         const pOld=localStorage.getItem('gP');
         if(pOld){
-          data={
-            P:JSON.parse(pOld),
-            CO:JSON.parse(localStorage.getItem('gCO')||'[]'),
-            FX:JSON.parse(localStorage.getItem('gFX')||'[]'),
-            PH:JSON.parse(localStorage.getItem('gPH')||'{}'),
-            SESSIONS:JSON.parse(localStorage.getItem('gSS')||'[]'),
-            FOLDERS:JSON.parse(localStorage.getItem('gFO')||'[]'),
-            PM:parseInt(localStorage.getItem('gPM')||'3'),
-            fgid:parseInt(localStorage.getItem('gFgid')||'3'),
-            coid:parseInt(localStorage.getItem('gCoid')||'40'),
-          };
+          data={P:JSON.parse(pOld),CO:JSON.parse(localStorage.getItem('gCO')||'[]'),
+            FX:JSON.parse(localStorage.getItem('gFX')||'[]'),PH:JSON.parse(localStorage.getItem('gPH')||'{}'),
+            SESSIONS:JSON.parse(localStorage.getItem('gSS')||'[]'),FOLDERS:JSON.parse(localStorage.getItem('gFO')||'[]'),
+            PM:parseInt(localStorage.getItem('gPM')||'3'),fgid:parseInt(localStorage.getItem('gFgid')||'3'),
+            coid:parseInt(localStorage.getItem('gCoid')||'40')};
           setSyncSt('📦 旧データ移行','rgba(230,81,0,.6)');
         }
       }
     }catch(e){}
   }
   if(!data){setSyncSt('🆕 新規','rgba(96,125,139,.6)');return;}
-
-  // データを反映
   try{
     if(data.P&&data.P.length){P=data.P;nid=Math.max(...P.map(x=>x.id))+1;}
     if(data.CO&&data.CO.length){CO=data.CO;coid=Math.max(...CO.map(x=>x.id))+1;}
-    if(data.FX){FX=data.FX;}
+    if(data.FX)FX=data.FX;
     if(data.fgid)fgid=data.fgid;
     if(data.coid)coid=data.coid;
     if(data.nid)nid=data.nid;
     if(data.PH)PH=data.PH;
     if(data.SESSIONS)SESSIONS=data.SESSIONS;
     if(data.FOLDERS)FOLDERS=data.FOLDERS;
-    if(data.PM){
-      PM=data.PM;
-      const ps=document.getElementById('psl');if(ps)ps.value=PM;
-      const pd=document.getElementById('pdis');if(pd)pd.textContent=PM;
-    }
-  }catch(e){console.warn('Data apply error:',e);}
-
-  // リアルタイム更新購読
+    if(data.PM){PM=data.PM;const ps=document.getElementById('psl');if(ps)ps.value=PM;const pd=document.getElementById('pdis');if(pd)pd.textContent=PM;}
+  }catch(e){console.warn('data apply',e);}
   if(_sb){
-    _sb.channel('golf-realtime')
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'golf_data'},
-        payload=>{
-          const d=payload.new?.value;
-          if(!d)return;
-          setSyncSt('🔄 更新受信...','rgba(21,101,192,.6)');
-          try{
-            if(d.P){P=d.P;nid=Math.max(...P.map(x=>x.id))+1;}
-            if(d.CO)CO=d.CO;
-            if(d.FX)FX=d.FX;
-            if(d.PH)PH=d.PH;
-            if(d.SESSIONS)SESSIONS=d.SESSIONS;
-            if(d.FOLDERS)FOLDERS=d.FOLDERS;
-          }catch(e){}
-          // 現在のタブを再描画
-          const t=document.querySelector('.tab.on');if(t)t.click();
-          setSyncSt('✅ 同期済み','rgba(46,125,50,.7)');
-        })
-      .subscribe();
+    _sb.channel('golf-rt').on('postgres_changes',
+      {event:'UPDATE',schema:'public',table:'golf_data'},payload=>{
+        const d=payload.new?.value;if(!d)return;
+        setSyncSt('🔄 更新受信...','rgba(21,101,192,.6)');
+        try{
+          if(d.P){P=d.P;nid=Math.max(...P.map(x=>x.id))+1;}
+          if(d.CO)CO=d.CO;if(d.FX)FX=d.FX;if(d.PH)PH=d.PH;
+          if(d.SESSIONS)SESSIONS=d.SESSIONS;if(d.FOLDERS)FOLDERS=d.FOLDERS;
+        }catch(e){}
+        const t=document.querySelector('.tab.on');if(t)t.click();
+        setSyncSt('✅ 同期済み','rgba(46,125,50,.7)');
+      }).subscribe();
   }
 }
 
@@ -1733,17 +1693,15 @@ function generate(){
   const hasPast=Object.keys(PH).length>0;
   const doBalance=!!(document.getElementById('chkBalance')?.checked);
 
-  // ── ヘルパー ──
-  const getS=p=>(p.score&&p.score>60)?p.score:100; // 100点込み
+  // ヘルパー
+  const getS=p=>(p.score&&p.score>60)?p.score:100;
   const gAvg=g=>g.length?g.reduce((s,p)=>s+getS(p),0)/g.length:100;
   const isLEEGrp=g=>g.some(p=>p.company.includes('LEE')||p.company.includes('ＬＥＥ'));
   const fixedIds=new Set(FX.flatMap(fx=>fx.ids));
 
-  // ── グループ初期化 ──
+  // ① 固定グループを先に配置
   const grps=Array.from({length:ng},()=>[]);
   const placed=new Set();
-
-  // ① 固定グループを先に配置
   FX.forEach((fx,i)=>{
     const gi=i%ng;
     fx.ids.forEach(id=>{
@@ -1752,45 +1710,41 @@ function generate(){
     });
   });
 
-  // ② 残り参加者をスコア昇順（100点込み）でスネーク配置
-  const pool=[...ac].filter(p=>!placed.has(p.id)).sort((a,b)=>getS(a)-getS(b));
+  // ② Fisher-Yatesシャッフル→スコア昇順ソート（再生成のたびに違うメンバー構成）
+  const pool=[...ac].filter(p=>!placed.has(p.id));
+  for(let i=pool.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [pool[i],pool[j]]=[pool[j],pool[i]];
+  }
+  pool.sort((a,b)=>getS(a)-getS(b));
+
+  // ③ スネーク配置（スコア昇順→蛇行→各組に上位・中位・下位が均等に分散）
   let d=1,gi=0;
   pool.forEach(p=>{
     const g=grps[gi];
     if(g.length<4){g.push(p);placed.add(p.id);}
     else{const alt=grps.find(g2=>g2.length<4);if(alt){alt.push(p);placed.add(p.id);}}
-    gi+=d;
-    if(gi>=ng){gi=ng-1;d=-1;}else if(gi<0){gi=0;d=1;}
+    gi+=d;if(gi>=ng){gi=ng-1;d=-1;}else if(gi<0){gi=0;d=1;}
   });
 
-  // ③ 統合ペナルティスワップ最適化
-  // スコア偏差と同会社を同時に最小化（改善があった時点で次パスへ）
+  // ④ 統合ペナルティスワップ（同会社・女性重複・過去ペア・スコア偏差を同時最小化）
   function grpPen(g,globalAvg){
     let p=0;
-    // 同会社ペナルティ（最優先）
-    for(let i=0;i<g.length;i++)
-      for(let j=i+1;j<g.length;j++)
-        if(g[i].company===g[j].company)p+=100000;
-    // 女性2人以上ペナルティ（LEE除く）
+    for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){
+      if(g[i].company===g[j].company)p+=100000;
+      p+=getPP(g[i].name,g[j].name);
+    }
     const fc=g.filter(x=>isF(x.name)).length;
     if(fc>=2&&!isLEEGrp(g))p+=50000*(fc-1);
-    // 過去ペアペナルティ
-    for(let i=0;i<g.length;i++)
-      for(let j=i+1;j<g.length;j++)
-        p+=getPP(g[i].name,g[j].name);
-    // スコア偏差ペナルティ（均等化ON時）
-    if(doBalance){
-      const dev=gAvg(g)-globalAvg;
-      p+=dev*dev*50;
-    }
+    if(doBalance){const dev=gAvg(g)-globalAvg;p+=dev*dev*50;}
     return p;
   }
 
   let improved=true,pass=0;
   while(improved&&pass<300){
     improved=false;pass++;
-    const validG=grps.filter(g=>g.length);
-    const globalAvg=validG.reduce((s,g)=>s+gAvg(g),0)/validG.length;
+    const vG=grps.filter(g=>g.length);
+    const globalAvg=vG.reduce((s,g)=>s+gAvg(g),0)/vG.length;
     for(let ga=0;ga<ng&&!improved;ga++){
       for(let gb=ga+1;gb<ng&&!improved;gb++){
         if(!grps[ga].length||!grps[gb].length)continue;
@@ -1811,18 +1765,16 @@ function generate(){
 
   GR=grps.filter(g=>g.length>0);
 
-  // ── 結果 ──
+  // ⑤ 結果表示
   const avgs=GR.map(g=>Math.round(gAvg(g)));
   const maxA=Math.max(...avgs),minA=Math.min(...avgs);
   const coWarn=GR.filter(g=>g.some((p,i)=>g.some((q,j)=>j>i&&p.company===q.company))).length;
   const femWarn=GR.filter(g=>{const fc=g.filter(p=>isF(p.name)).length;return fc>=2&&!isLEEGrp(g);}).length;
-
   renderResult(0,hasPast);
   let info=GR.length+'組生成（'+pass+'パス）';
   if(doBalance)info+=' 📊組平均: 最大'+maxA+'／最小'+minA+'／差'+(maxA-minA)+'点';
-  if(coWarn===0)info+=' ✅同会社重複なし';
-  else info+=' ⚠️同会社'+coWarn+'組';
-  if(femWarn===0)info+=' ✅女性重複なし';
+  if(coWarn===0)info+=' ✅同会社なし';else info+=' ⚠️同会社'+coWarn+'組';
+  if(femWarn===0)info+=' ✅女性OK';
   if(hasPast)info+=' ／ 過去ペア反映';
   document.getElementById('ginfo').textContent=info;
 }
@@ -2565,26 +2517,18 @@ function loadNoticeFromFolder(fid, idx){
 // =============================================
 // === 初期化 ===
 // =============================================
-// 非同期初期化（Supabase対応）
 (async()=>{
   await ld();
   // 第19回の順位データからスコアを参加者に反映
-  const r19=FOLDERS.find(f=>f.id==='f19')?.files.find(f=>f.type==='ranking')?.data||[];
-  r19.forEach(d=>{
-    const p=P.find(x=>norm(x.name)===norm(d.name));
-    if(p&&(!p.score||p.score===100))p.score=d.score;
-  });
+const r19=FOLDERS.find(f=>f.id==='f19')?.files.find(f=>f.type==='ranking')?.data||[];
+r19.forEach(d=>{
+  const p=P.find(x=>norm(x.name)===norm(d.name));
+  if(p&&(!p.score||p.score===100))p.score=d.score;
+});
   updateCoFilterM();
   renderM();
   renderDash();
   document.getElementById('th-no').className='asc';
-  // スコア均等化スライダー連動
-  const bwEl=document.getElementById('balanceW');
-  const bwvEl=document.getElementById('balanceWv');
-  const bwWrap=document.getElementById('balance-weight-wrap');
-  if(bwEl)bwEl.addEventListener('input',function(){if(bwvEl)bwvEl.textContent=this.value;});
-  const chkB=document.getElementById('chkBalance');
-  if(chkB)chkB.addEventListener('change',function(){if(bwWrap)bwWrap.style.display=this.checked?'flex':'none';});
 })();
 </script>
 </body>
