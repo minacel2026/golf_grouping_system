@@ -2034,23 +2034,31 @@ function expXLSX(){
   if(!GR||!GR.length){alert('先に組み合わせを生成してください');return;}
   const cfg=XLSX_CFG;
 
-  // テンプレートExcel（書式・マージ・数式込み）を読込
+  // テンプレートExcel（書式・罫線・マージ・数式込み）を読込
   const bstr=atob(_TMPL_B64);
   const arr=new Uint8Array(bstr.length);
   for(let i=0;i<bstr.length;i++)arr[i]=bstr.charCodeAt(i);
-  const wb=XLSX.read(arr,{type:'array'});
+  const wb=XLSX.read(arr,{type:'array',cellStyles:true});
   const ws=wb.Sheets[wb.SheetNames[0]];
 
+  // セルの書式を保持しながら値だけ更新するヘルパー
+  function setCell(addr, type, val){
+    const existing = ws[addr] || {};
+    ws[addr] = Object.assign({}, existing, {t: type, v: val});
+    // 数式があれば削除（値で上書き）
+    delete ws[addr].f;
+  }
+
   // ── ヘッダー情報を転記 ──
-  ws['A1']={t:'s',v:cfg.title||''};
-  ws['C3']={t:'s',v:cfg.venue||''};
-  ws['C4']={t:'s',v:cfg.date||''};
-  ws['C5']={t:'s',v:cfg.startOut||''};
-  ws['C6']={t:'s',v:cfg.startIn||''};
-  ws['C7']={t:'s',v:cfg.meetTime||''};
-  ws['C8']={t:'s',v:cfg.compName||''};
-  ws['C9']={t:'s',v:cfg.recepTime||''};
-  ws['A10']={t:'s',v:cfg.note||''};
+  setCell('A1','s', cfg.title||'');
+  setCell('C3','s', cfg.venue||'');
+  setCell('C4','s', cfg.date||'');
+  setCell('C5','s', cfg.startOut||'');
+  setCell('C6','s', cfg.startIn||'');
+  setCell('C7','s', cfg.meetTime||'');
+  setCell('C8','s', cfg.compName||'');
+  setCell('C9','s', cfg.recepTime||'');
+  setCell('A10','s', cfg.note||'');
 
   // スコア書式化（初参加は「初」）
   function fmtSc(p){
@@ -2060,39 +2068,38 @@ function expXLSX(){
     return {t:'s',v:''};
   }
 
-  // ── 各組のコース・時間・氏名・会社・スコアを転記 ──
-  // 新テンプレート: グループ1がrow14から、2行ずつ
+  // ── 各組のデータを転記（書式を保持） ──
   GR.forEach((grp,gi)=>{
     if(gi>=16)return;
-    const r1=14+gi*2; // 組番号・コース・メンバー①②行
+    const r1=14+gi*2; // コース・メンバー①②行
     const r2=r1+1;    // 時間・メンバー③④行
     const gcfg=cfg.groups[gi]||{course:'',time:''};
     const m=idx=>grp[idx]||{name:'',company:'',score:null,isInit:false};
 
-    // コース名と時間
-    ws['B'+r1]={t:'s',v:gcfg.course||''};
-    ws['B'+r2]={t:'s',v:gcfg.time||''};
+    // コース名・時間（書式保持）
+    setCell('B'+r1, 's', gcfg.course||'');
+    setCell('B'+r2, 's', gcfg.time||'');
 
-    // 行r1: メンバー①②（左ペア）
-    ws['C'+r1]={t:'s',v:m(0).name||''};
-    ws['D'+r1]={t:'s',v:m(0).company||''};
-    ws['E'+r1]=fmtSc(m(0));
-    ws['F'+r1]={t:'s',v:m(1).name||''};
-    ws['G'+r1]={t:'s',v:m(1).company||''};
-    ws['H'+r1]=fmtSc(m(1));
+    // 行r1: メンバー①②
+    setCell('C'+r1, 's', m(0).name||'');
+    setCell('D'+r1, 's', m(0).company||'');
+    const sc0=fmtSc(m(0)); ws['E'+r1]=Object.assign({},ws['E'+r1]||{},sc0); delete (ws['E'+r1]||{}).f;
+    setCell('F'+r1, 's', m(1).name||'');
+    setCell('G'+r1, 's', m(1).company||'');
+    const sc1=fmtSc(m(1)); ws['H'+r1]=Object.assign({},ws['H'+r1]||{},sc1); delete (ws['H'+r1]||{}).f;
 
-    // 行r2: メンバー③④（右ペア）
-    ws['C'+r2]={t:'s',v:m(2).name||''};
-    ws['D'+r2]={t:'s',v:m(2).company||''};
-    ws['E'+r2]=fmtSc(m(2));
-    ws['F'+r2]={t:'s',v:m(3).name||''};
-    ws['G'+r2]={t:'s',v:m(3).company||''};
-    ws['H'+r2]=fmtSc(m(3));
+    // 行r2: メンバー③④
+    setCell('C'+r2, 's', m(2).name||'');
+    setCell('D'+r2, 's', m(2).company||'');
+    const sc2=fmtSc(m(2)); ws['E'+r2]=Object.assign({},ws['E'+r2]||{},sc2); delete (ws['E'+r2]||{}).f;
+    setCell('F'+r2, 's', m(3).name||'');
+    setCell('G'+r2, 's', m(3).company||'');
+    const sc3=fmtSc(m(3)); ws['H'+r2]=Object.assign({},ws['H'+r2]||{},sc3); delete (ws['H'+r2]||{}).f;
   });
 
   const evtTag=cfg.title||document.getElementById('event-tag')?.textContent||'宮崎工業杯';
-  const fname='組み合わせ_'+evtTag.replace(/[\/:\*?"<>|]/g,'_')+'.xlsx';
-  XLSX.writeFile(wb,fname);
+  const fname='組み合わせ_'+evtTag.replace(/[\/\\:*?"<>|]/g,'_')+'.xlsx';
+  XLSX.writeFile(wb,fname,{cellStyles:true});
 }
 
 
