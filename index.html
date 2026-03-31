@@ -1682,9 +1682,6 @@ function generate(){
   const ac=P.filter(p=>p.attend);
   if(ac.length<4){alert('参加者が4人未満です');return;}
   const ngSel=document.getElementById('ngSel').value;
-  // autoの場合: ceil(n/4)で最大4人/組を保証
-  const ngRaw=ngSel==='auto'?Math.min(15,Math.ceil(ac.length/4)):parseInt(ngSel);
-  const ng=Math.max(1,ngRaw);
   const hasPast=Object.keys(PH).length>0;
   const doBalance=!!(document.getElementById('chkBalance')?.checked);
 
@@ -1693,16 +1690,40 @@ function generate(){
   const isLEEGrp=g=>g.some(p=>p.company.includes('LEE')||p.company.includes('ＬＥＥ'));
   const fixedIds=new Set(FX.flatMap(fx=>fx.ids));
 
-  // ① 固定グループを先に配置
-  const grps=Array.from({length:ng},()=>[]);
+  // =============================================
+  // ① 固定グループを最優先で専用の組に配置
+  //    （何人でも同じ組に入れる、スワップ・マージ対象外）
+  // =============================================
+  const grps=[];
   const placed=new Set();
-  FX.forEach((fx,i)=>{
-    const gi=i%ng;
-    fx.ids.forEach(id=>{
-      const p=ac.find(x=>x.id===id);
-      if(p&&!placed.has(p.id)&&grps[gi].length<4){grps[gi].push(p);placed.add(p.id);}
-    });
+  const fixedGrpIdx=new Set(); // 固定グループが入っている組のインデックス
+
+  FX.forEach((fx)=>{
+    // 参加中の固定メンバーのみ
+    const members=fx.ids.map(id=>ac.find(x=>x.id===id)).filter(Boolean);
+    if(!members.length)return;
+    // 専用の組を追加
+    const gi=grps.length;
+    grps.push([]);
+    members.forEach(p=>{grps[gi].push(p);placed.add(p.id);});
+    fixedGrpIdx.add(gi);
   });
+
+  // 固定グループ込みの組数を決定
+  const fixedCount=grps.length;
+  const remaining=ac.filter(p=>!placed.has(p.id)).length;
+  // autoの場合: 残り人数をceil(n/4)で組数計算し固定グループ数を加算
+  let ngExtra;
+  if(ngSel==='auto'){
+    ngExtra=Math.min(15-fixedCount, Math.ceil(remaining/4));
+    if(ngExtra<0)ngExtra=0;
+  }else{
+    ngExtra=Math.max(0,parseInt(ngSel)-fixedCount);
+  }
+  const ng=fixedCount+ngExtra;
+
+  // 追加の空グループを作成
+  for(let i=0;i<ngExtra;i++)grps.push([]);
 
   // ② Fisher-Yatesシャッフル→スコア昇順（再生成のたびに違うメンバー）
   const pool=[...ac].filter(p=>!placed.has(p.id));
@@ -1712,16 +1733,22 @@ function generate(){
   }
   pool.sort((a,b)=>getS(a)-getS(b));
 
-  // ③ スネーク配置
-  let d=1,gi=0;
+  // ③ スネーク配置（固定グループ以外の組のみ対象）
+  const freeGrpIdx=grps.map((_,i)=>i).filter(i=>!fixedGrpIdx.has(i));
+  let d=1,fgi=0;
   pool.forEach(p=>{
-    const g=grps[gi];
-    if(g.length<4){g.push(p);placed.add(p.id);}
-    else{const alt=grps.find(g2=>g2.length<4);if(alt){alt.push(p);placed.add(p.id);}}
-    gi+=d;if(gi>=ng){gi=ng-1;d=-1;}else if(gi<0){gi=0;d=1;}
+    if(!freeGrpIdx.length)return;
+    const gi=freeGrpIdx[fgi];
+    if(grps[gi].length<4){grps[gi].push(p);placed.add(p.id);}
+    else{
+      const alt=freeGrpIdx.find(idx=>grps[idx].length<4);
+      if(alt!==undefined){grps[alt].push(p);placed.add(p.id);}
+    }
+    fgi+=d;if(fgi>=freeGrpIdx.length){fgi=freeGrpIdx.length-1;d=-1;}
+    else if(fgi<0){fgi=0;d=1;}
   });
 
-  // ④ 統合ペナルティスワップ
+  // ④ 統合ペナルティスワップ（固定グループは絶対スワップしない）
   function grpPen(g,globalAvg){
     let p=0;
     for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){
@@ -1740,7 +1767,9 @@ function generate(){
     const vG=grps.filter(g=>g.length);
     const globalAvg=vG.reduce((s,g)=>s+gAvg(g),0)/vG.length;
     for(let ga=0;ga<ng&&!improved;ga++){
+      if(fixedGrpIdx.has(ga))continue; // 固定グループはスキップ
       for(let gb=ga+1;gb<ng&&!improved;gb++){
+        if(fixedGrpIdx.has(gb))continue; // 固定グループはスキップ
         if(!grps[ga].length||!grps[gb].length)continue;
         for(let ia=0;ia<grps[ga].length&&!improved;ia++){
           for(let ib=0;ib<grps[gb].length&&!improved;ib++){
@@ -1757,27 +1786,29 @@ function generate(){
     }
   }
 
-  // 3人未満の組に4人組から1人移動（3〜4人/組を保証）
-  let merged=grps.filter(g=>g.length>0);
+  // ⑤ 3〜4人保証（固定グループ以外のみ対象）
+  let merged=grps.filter((g,i)=>!fixedGrpIdx.has(i)&&g.length>0);
+  const fixedGrps=grps.filter((_,i)=>fixedGrpIdx.has(i));
   let mchg=true;
   while(mchg){
     mchg=false;
     for(let i=0;i<merged.length;i++){
       if(merged[i].length>=3)continue;
-      // 4人以上の組から1人移動して3人に
       const donor=merged.find((g,gi)=>gi!==i&&g.length>=4);
       if(donor){merged[i].push(donor.pop());mchg=true;break;}
-      // 4人組なし(n=5等)→マージ（やむなし）
       const big=merged.reduce((a,b,bi)=>b.length>a.length&&bi!==i?b:a,merged[0]);
       big.push(...merged[i]);merged.splice(i,1);mchg=true;break;
     }
   }
-  GR=merged;
 
+  // 固定グループを先頭に、通常グループを後に並べる
+  GR=[...fixedGrps,...merged];
+
+  // ⑥ 結果表示
   const avgs=GR.map(g=>Math.round(gAvg(g)));
   const maxA=Math.max(...avgs),minA=Math.min(...avgs);
-  const coWarn=GR.filter(g=>g.some((p,i)=>g.some((q,j)=>j>i&&p.company===q.company))).length;
-  const femWarn=GR.filter(g=>{const fc=g.filter(p=>isF(p.name)).length;return fc>=2&&!isLEEGrp(g);}).length;
+  const coWarn=GR.filter((g,gi)=>!fixedGrpIdx.has(gi)&&g.some((p,i)=>g.some((q,j)=>j>i&&p.company===q.company))).length;
+  const femWarn=GR.filter((g,gi)=>!fixedGrpIdx.has(gi)&&(()=>{const fc=g.filter(p=>isF(p.name)).length;return fc>=2&&!isLEEGrp(g);})()).length;
   renderResult(0,hasPast);
   let info=GR.length+'組生成（'+pass+'パス）';
   if(doBalance)info+=' 📊組平均: 最大'+maxA+'／最小'+minA+'／差'+(maxA-minA)+'点';
