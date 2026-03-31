@@ -1691,64 +1691,75 @@ function generate(){
   const fixedIds=new Set(FX.flatMap(fx=>fx.ids));
 
   // =============================================
-  // ① 固定グループを最優先で専用の組に配置
-  //    （何人でも同じ組に入れる、スワップ・マージ対象外）
+  // ① 固定グループを最優先で配置（参加者のみ）
   // =============================================
   const grps=[];
   const placed=new Set();
-  const fixedGrpIdx=new Set(); // 固定グループが入っている組のインデックス
+  const fixedGrpIdx=new Set();
 
-  FX.forEach((fx)=>{
-    // 参加中の固定メンバーのみ
+  FX.forEach(fx=>{
+    // 参加中のメンバーのみ
     const members=fx.ids.map(id=>ac.find(x=>x.id===id)).filter(Boolean);
     if(!members.length)return;
-    // 専用の組を追加
+    // 専用の組を作成（何人でも入れる）
     const gi=grps.length;
-    grps.push([]);
-    members.forEach(p=>{grps[gi].push(p);placed.add(p.id);});
+    grps.push([...members]);
+    members.forEach(p=>placed.add(p.id));
     fixedGrpIdx.add(gi);
   });
 
-  // 固定グループ込みの組数を決定
-  const fixedCount=grps.length;
-  const remaining=ac.filter(p=>!placed.has(p.id)).length;
-  // autoの場合: 残り人数をceil(n/4)で組数計算し固定グループ数を加算
-  let ngExtra;
-  if(ngSel==='auto'){
-    ngExtra=Math.min(15-fixedCount, Math.ceil(remaining/4));
-    if(ngExtra<0)ngExtra=0;
-  }else{
-    ngExtra=Math.max(0,parseInt(ngSel)-fixedCount);
-  }
-  const ng=fixedCount+ngExtra;
-
-  // 追加の空グループを作成
-  for(let i=0;i<ngExtra;i++)grps.push([]);
-
-  // ② Fisher-Yatesシャッフル→スコア昇順（再生成のたびに違うメンバー）
+  // ② 残り参加者を確定
   const pool=[...ac].filter(p=>!placed.has(p.id));
+  // Fisher-Yatesシャッフル→スコア昇順（毎回違うメンバー構成）
   for(let i=pool.length-1;i>0;i--){
     const j=Math.floor(Math.random()*(i+1));
     [pool[i],pool[j]]=[pool[j],pool[i]];
   }
   pool.sort((a,b)=>getS(a)-getS(b));
 
-  // ③ スネーク配置（固定グループ以外の組のみ対象）
-  const freeGrpIdx=grps.map((_,i)=>i).filter(i=>!fixedGrpIdx.has(i));
-  let d=1,fgi=0;
-  pool.forEach(p=>{
-    if(!freeGrpIdx.length)return;
-    const gi=freeGrpIdx[fgi];
-    if(grps[gi].length<4){grps[gi].push(p);placed.add(p.id);}
-    else{
-      const alt=freeGrpIdx.find(idx=>grps[idx].length<4);
-      if(alt!==undefined){grps[alt].push(p);placed.add(p.id);}
+  // ③ 固定グループが3人未満の場合はpoolから補充
+  grps.forEach((g,gi)=>{
+    if(!fixedGrpIdx.has(gi))return;
+    while(g.length<3&&pool.length>0){
+      // スコアが最も近い人を補充
+      const avg=gAvg(g);
+      let bestIdx=0,bestDiff=Infinity;
+      pool.forEach((p,pi)=>{const diff=Math.abs(getS(p)-avg);if(diff<bestDiff){bestDiff=diff;bestIdx=pi;}});
+      const p=pool.splice(bestIdx,1)[0];
+      g.push(p);placed.add(p.id);
     }
-    fgi+=d;if(fgi>=freeGrpIdx.length){fgi=freeGrpIdx.length-1;d=-1;}
-    else if(fgi<0){fgi=0;d=1;}
   });
 
-  // ④ 統合ペナルティスワップ（固定グループは絶対スワップしない）
+  // ④ 通常組の数を決定
+  const remaining=pool.length;
+  const fixedCount=grps.length;
+  let ngExtra;
+  if(ngSel==='auto'){
+    ngExtra=Math.min(15-fixedCount,Math.max(0,Math.ceil(remaining/4)));
+  }else{
+    ngExtra=Math.max(0,parseInt(ngSel)-fixedCount);
+  }
+  for(let i=0;i<ngExtra;i++)grps.push([]);
+  const ng=grps.length;
+
+  // ⑤ スネーク配置（通常組のみ）
+  const freeIdx=grps.map((_,i)=>i).filter(i=>!fixedGrpIdx.has(i));
+  if(freeIdx.length&&pool.length){
+    let d=1,fgi=0;
+    pool.forEach(p=>{
+      const gi=freeIdx[fgi];
+      if(grps[gi].length<4){grps[gi].push(p);placed.add(p.id);}
+      else{
+        const alt=freeIdx.find(idx=>grps[idx].length<4);
+        if(alt!==undefined){grps[alt].push(p);placed.add(p.id);}
+      }
+      fgi+=d;
+      if(fgi>=freeIdx.length){fgi=freeIdx.length-1;d=-1;}
+      else if(fgi<0){fgi=0;d=1;}
+    });
+  }
+
+  // ⑥ 統合ペナルティスワップ（通常組のみ、固定グループは絶対スキップ）
   function grpPen(g,globalAvg){
     let p=0;
     for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){
@@ -1764,12 +1775,13 @@ function generate(){
   let improved=true,pass=0;
   while(improved&&pass<300){
     improved=false;pass++;
-    const vG=grps.filter(g=>g.length);
-    const globalAvg=vG.reduce((s,g)=>s+gAvg(g),0)/vG.length;
+    // 通常組のみの平均でスコア均等化（固定グループは含めない）
+    const freeGs=grps.filter((_,i)=>!fixedGrpIdx.has(i)&&grps[i].length);
+    const globalAvg=freeGs.length?freeGs.reduce((s,g)=>s+gAvg(g),0)/freeGs.length:100;
     for(let ga=0;ga<ng&&!improved;ga++){
-      if(fixedGrpIdx.has(ga))continue; // 固定グループはスキップ
+      if(fixedGrpIdx.has(ga))continue;
       for(let gb=ga+1;gb<ng&&!improved;gb++){
-        if(fixedGrpIdx.has(gb))continue; // 固定グループはスキップ
+        if(fixedGrpIdx.has(gb))continue;
         if(!grps[ga].length||!grps[gb].length)continue;
         for(let ia=0;ia<grps[ga].length&&!improved;ia++){
           for(let ib=0;ib<grps[gb].length&&!improved;ib++){
@@ -1786,32 +1798,35 @@ function generate(){
     }
   }
 
-  // ⑤ 3〜4人保証（固定グループ以外のみ対象）
-  let merged=grps.filter((g,i)=>!fixedGrpIdx.has(i)&&g.length>0);
-  const fixedGrps=grps.filter((_,i)=>fixedGrpIdx.has(i));
+  // ⑦ 3〜4人保証（通常組のみ）
+  let freeGrps=grps.filter((_,i)=>!fixedGrpIdx.has(i)&&grps[i].length>0);
+  const fixedGrpsArr=grps.filter((_,i)=>fixedGrpIdx.has(i));
   let mchg=true;
   while(mchg){
     mchg=false;
-    for(let i=0;i<merged.length;i++){
-      if(merged[i].length>=3)continue;
-      const donor=merged.find((g,gi)=>gi!==i&&g.length>=4);
-      if(donor){merged[i].push(donor.pop());mchg=true;break;}
-      const big=merged.reduce((a,b,bi)=>b.length>a.length&&bi!==i?b:a,merged[0]);
-      big.push(...merged[i]);merged.splice(i,1);mchg=true;break;
+    for(let i=0;i<freeGrps.length;i++){
+      if(freeGrps[i].length>=3)continue;
+      const donor=freeGrps.find((g,gi)=>gi!==i&&g.length>=4);
+      if(donor){freeGrps[i].push(donor.pop());mchg=true;break;}
+      if(freeGrps.length>1){
+        const big=freeGrps.reduce((a,b,bi)=>b.length>a.length&&bi!==i?b:a,freeGrps[0]);
+        big.push(...freeGrps[i]);freeGrps.splice(i,1);mchg=true;break;
+      }
     }
   }
 
-  // 固定グループを先頭に、通常グループを後に並べる
-  GR=[...fixedGrps,...merged];
+  // 固定グループ先頭＋通常グループ
+  GR=[...fixedGrpsArr,...freeGrps];
 
-  // ⑥ 結果表示
-  const avgs=GR.map(g=>Math.round(gAvg(g)));
-  const maxA=Math.max(...avgs),minA=Math.min(...avgs);
-  const coWarn=GR.filter((g,gi)=>!fixedGrpIdx.has(gi)&&g.some((p,i)=>g.some((q,j)=>j>i&&p.company===q.company))).length;
-  const femWarn=GR.filter((g,gi)=>!fixedGrpIdx.has(gi)&&(()=>{const fc=g.filter(p=>isF(p.name)).length;return fc>=2&&!isLEEGrp(g);})()).length;
+  // ⑧ 結果表示
+  const freeAvgs=freeGrps.map(g=>Math.round(gAvg(g)));
+  const maxA=freeAvgs.length?Math.max(...freeAvgs):0;
+  const minA=freeAvgs.length?Math.min(...freeAvgs):0;
+  const coWarn=freeGrps.filter(g=>g.some((p,i)=>g.some((q,j)=>j>i&&p.company===q.company))).length;
+  const femWarn=freeGrps.filter(g=>{const fc=g.filter(p=>isF(p.name)).length;return fc>=2&&!isLEEGrp(g);}).length;
   renderResult(0,hasPast);
   let info=GR.length+'組生成（'+pass+'パス）';
-  if(doBalance)info+=' 📊組平均: 最大'+maxA+'／最小'+minA+'／差'+(maxA-minA)+'点';
+  if(doBalance&&freeAvgs.length)info+=' 📊組平均: 最大'+maxA+'／最小'+minA+'／差'+(maxA-minA)+'点';
   if(coWarn===0)info+=' ✅同会社なし';else info+=' ⚠️同会社'+coWarn+'組';
   if(femWarn===0)info+=' ✅女性OK';
   if(hasPast)info+=' ／ 過去ペア反映';
