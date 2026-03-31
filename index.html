@@ -1780,7 +1780,7 @@ function generate(){
     }
     const fc=g.filter(x=>isF(x.name)).length;
     if(fc>=2&&!isLEEGrp(g))p+=50000*(fc-1);
-    if(doBalance){const dev=gAvg(g)-globalAvg;p+=dev*dev*50;}
+    if(doBalance){const dev=gAvg(g)-globalAvg;p+=dev*dev*500;} // スコア均等化を強く
     return p;
   }
 
