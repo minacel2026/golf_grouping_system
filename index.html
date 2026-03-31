@@ -154,6 +154,7 @@ input[type=range]{width:100%;accent-color:var(--g2)}
   <span style="font-size:18px">⛳</span>
   <h1>宮崎工業杯 コンペ管理システム</h1>
   <span class="event-tag" id="event-tag">第21回 2026.4.12</span>
+  <span id="sync-status" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:10px;background:rgba(255,255,255,.15)">🔄 接続中...</span>
   <span style="margin-left:auto;font-size:10px;opacity:.8">★=女性</span>
 </div>
 
@@ -544,6 +545,7 @@ input[type=range]{width:100%;accent-color:var(--g2)}
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 // =============================================
@@ -753,29 +755,112 @@ let sortCol='no', sortDir=1;
 // =============================================
 // === localStorage ===
 // =============================================
-function sv(){
-  try{
-    localStorage.setItem('gP',JSON.stringify(P));
-    localStorage.setItem('gCO',JSON.stringify(CO));
-    localStorage.setItem('gFX',JSON.stringify(FX));
-    localStorage.setItem('gPH',JSON.stringify(PH));
-    localStorage.setItem('gSS',JSON.stringify(SESSIONS));
-    localStorage.setItem('gFO',JSON.stringify(FOLDERS));
-    localStorage.setItem('gPM',PM);
-    localStorage.setItem('gFgid',fgid);
-    localStorage.setItem('gCoid',coid);
-  }catch(e){}
+// =============================================
+// === Supabase 設定 ===
+// =============================================
+const SB_URL='https://dyqubppibpmpfkuvgvtr.supabase.co';
+const SB_KEY='sb_publishable_xtog4A5mlJPAPHsc35xulQ_p5KG32dD';
+let sbClient=null;
+try{
+  sbClient=supabase.createClient(SB_URL,SB_KEY);
+  console.log('Supabase接続OK');
+}catch(e){console.warn('Supabase初期化失敗:',e);}
+
+// 同期状態表示
+function setSyncStatus(msg,color){
+  let el=document.getElementById('sync-status');
+  if(!el)return;
+  el.textContent=msg;
+  el.style.color=color||'#666';
 }
-function ld(){
+
+// データをSupabaseに保存（ローカルにも同時保存）
+async function sv(){
+  const data={
+    P,CO,FX,PH,SESSIONS,FOLDERS,PM,fgid,coid
+  };
+  // ローカルにも保存（オフライン対応）
   try{
-    const pl=localStorage.getItem('gP');if(pl){P=JSON.parse(pl);nid=Math.max(...P.map(x=>x.id),nid-1)+1;}
-    const co=localStorage.getItem('gCO');if(co){CO=JSON.parse(co);coid=Math.max(...CO.map(x=>x.id),coid-1)+1;}
-    const fx=localStorage.getItem('gFX');if(fx){FX=JSON.parse(fx);fgid=parseInt(localStorage.getItem('gFgid')||fgid);}
-    const ph=localStorage.getItem('gPH');if(ph)PH=JSON.parse(ph);
-    const ss=localStorage.getItem('gSS');if(ss)SESSIONS=JSON.parse(ss);
-    const fo=localStorage.getItem('gFO');if(fo)FOLDERS=JSON.parse(fo);
-    const pm_=localStorage.getItem('gPM');if(pm_){PM=parseInt(pm_);document.getElementById('psl').value=PM;document.getElementById('pdis').textContent=PM;}
+    localStorage.setItem('golfData',JSON.stringify(data));
   }catch(e){}
+
+  // Supabaseに保存
+  if(!sbClient)return;
+  try{
+    setSyncStatus('💾 保存中...','var(--or)');
+    const {error}=await sbClient.from('golf_data').upsert({
+      key:'main',
+      value:data,
+      updated_at:new Date().toISOString()
+    },{onConflict:'key'});
+    if(error)throw error;
+    setSyncStatus('✅ 同期済み','var(--g2)');
+  }catch(e){
+    setSyncStatus('⚠️ ローカル保存のみ','var(--or)');
+    console.warn('Supabase保存エラー:',e);
+  }
+}
+
+// データをSupabaseから読込（なければローカル）
+async function ld(){
+  let data=null;
+
+  // まずSupabaseから取得
+  if(sbClient){
+    try{
+      setSyncStatus('🔄 読込中...','var(--or)');
+      const {data:rows,error}=await sbClient.from('golf_data').select('value').eq('key','main').single();
+      if(!error&&rows){
+        data=rows.value;
+        setSyncStatus('✅ クラウドから読込','var(--g2)');
+      }
+    }catch(e){
+      console.warn('Supabase読込エラー:',e);
+    }
+  }
+
+  // Supabaseから取れなければローカルから
+  if(!data){
+    try{
+      const local=localStorage.getItem('golfData');
+      if(local){data=JSON.parse(local);setSyncStatus('📱 ローカルから読込','#888');}
+    }catch(e){}
+  }
+
+  if(!data){setSyncStatus('🆕 新規データ','#888');return;}
+
+  // データを反映
+  try{
+    if(data.P){P=data.P;nid=Math.max(...P.map(x=>x.id),nid-1)+1;}
+    if(data.CO){CO=data.CO;coid=Math.max(...CO.map(x=>x.id),coid-1)+1;}
+    if(data.FX){FX=data.FX;fgid=data.fgid||fgid;}
+    if(data.PH)PH=data.PH;
+    if(data.SESSIONS)SESSIONS=data.SESSIONS;
+    if(data.FOLDERS)FOLDERS=data.FOLDERS;
+    if(data.PM){PM=data.PM;const ps=document.getElementById('psl');if(ps)ps.value=PM;const pd=document.getElementById('pdis');if(pd)pd.textContent=PM;}
+  }catch(e){console.warn('データ反映エラー:',e);}
+
+  // リアルタイム更新を購読
+  if(sbClient){
+    sbClient.channel('golf-sync')
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'golf_data'},
+        async (payload)=>{
+          const d=payload.new.value;
+          if(!d)return;
+          setSyncStatus('🔄 他のユーザーが更新...','var(--or)');
+          if(d.P){P=d.P;nid=Math.max(...P.map(x=>x.id),nid-1)+1;}
+          if(d.CO)CO=d.CO;
+          if(d.FX)FX=d.FX;
+          if(d.PH)PH=d.PH;
+          if(d.SESSIONS)SESSIONS=d.SESSIONS;
+          if(d.FOLDERS)FOLDERS=d.FOLDERS;
+          // 現在表示中のタブを再描画
+          const activeTab=document.querySelector('.tab.on');
+          if(activeTab)activeTab.click();
+          setSyncStatus('✅ 同期済み','var(--g2)');
+        })
+      .subscribe();
+  }
 }
 
 // =============================================
@@ -2501,17 +2586,20 @@ function loadNoticeFromFolder(fid, idx){
 // =============================================
 // === 初期化 ===
 // =============================================
-ld();
-// 第19回の順位データからスコアを参加者に反映
+// 非同期初期化
+(async()=>{
+  await ld();
+  // 第19回の順位データからスコアを参加者に反映
 const r19=FOLDERS.find(f=>f.id==='f19')?.files.find(f=>f.type==='ranking')?.data||[];
 r19.forEach(d=>{
   const p=P.find(x=>norm(x.name)===norm(d.name));
   if(p&&(!p.score||p.score===100))p.score=d.score;
 });
-updateCoFilterM();
-renderM();
-renderDash();
-document.getElementById('th-no').className='asc';
+  updateCoFilterM();
+  renderM();
+  renderDash();
+  document.getElementById('th-no').className='asc';
+})();
 </script>
 </body>
 </html>
