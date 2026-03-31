@@ -2036,7 +2036,7 @@ function expXLSX(){
   if(typeof JSZip==='undefined'){alert('JSZipライブラリが読み込まれていません');return;}
   const cfg=XLSX_CFG;
 
-  // 各行C〜H列のスタイル番号マップ（罫線保持用）
+  // 各行B〜H列のスタイル番号マップ（罫線・書式保持用）
   const RS={
   14:{B:27,C:28,D:29,E:30,F:31,G:32,H:33},
   15:{B:34,C:35,D:36,E:36,F:37,G:38,H:39},
@@ -2072,6 +2072,16 @@ function expXLSX(){
   45:{B:54,C:46,D:36,E:47,F:38,G:38,H:39}
 };
 
+  // XML特殊文字エスケープ（必須）
+  function xmlEsc(s){
+    if(s===null||s===undefined)return '';
+    return String(s)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
   // スコア書式化
   function fmtSc(p){
     if(!p||!p.name)return null;
@@ -2091,8 +2101,8 @@ function expXLSX(){
       zip.file('xl/sharedStrings.xml').async('string'),
     ]).then(([sheetXml, sharedXml])=>{
 
-      // sharedStringsから既存エントリを取得
-      const siMatches=[...sharedXml.matchAll(/<si>(.*?)<\/si>/gs)];
+      // sharedStringsから既存エントリを取得（フリガナ等付属タグを除いた本文のみ）
+      const siMatches=[...sharedXml.matchAll(/<si>([\s\S]*?)<\/si>/g)];
       const strings=siMatches.map(m=>{
         const t=m[1].match(/<t[^>]*>([^<]*)<\/t>/);
         return t?t[1]:'';
@@ -2107,7 +2117,7 @@ function expXLSX(){
         return idx;
       }
 
-      // セルXMLを生成（s属性でスタイル番号保持→罫線が保持される）
+      // セルXMLを生成（s属性でスタイル番号保持→罫線・書式が保持される）
       function cellXml(addr,row,col,val){
         const s=(RS[row]&&RS[row][col])||0;
         const sAttr=s?` s="${s}"`:'';
@@ -2115,14 +2125,18 @@ function expXLSX(){
           return `<c r="${addr}"${sAttr}/>`;
         if(typeof val==='number')
           return `<c r="${addr}"${sAttr}><v>${val}</v></c>`;
-        const idx=strIdx(val);
+        const idx=strIdx(String(val));
+        if(idx<0) return `<c r="${addr}"${sAttr}/>`;
         return `<c r="${addr}"${sAttr} t="s"><v>${idx}</v></c>`;
       }
 
-      // ヘッダー情報を書き換え（sharedStrings経由）
+      // ヘッダーセルを書き換え（空の場合はスキップして元の値を保持）
       function replaceHdrCell(xml,addr,val,sAttr){
-        const idx=strIdx(val);
-        const re=new RegExp(`<c r="${addr}"([^>]*)>(?:<[fv]>[^<]*</[fv]>)?</c>`,'g');
+        if(!val) return xml;
+        const idx=strIdx(String(val));
+        if(idx<0) return xml;
+        // 通常セル・自己終了セル両方に対応
+        const re=new RegExp(`<c r="${addr}"[^>]*>(?:[\\s\\S]*?)<\\/c>|<c r="${addr}"[^>]*\\/>`, 'g');
         return xml.replace(re,`<c r="${addr}"${sAttr} t="s"><v>${idx}</v></c>`);
       }
       sheetXml=replaceHdrCell(sheetXml,'A1', cfg.title||'', ' s="1"');
@@ -2139,7 +2153,7 @@ function expXLSX(){
       GR.forEach((grp,gi)=>{
         if(gi>=16)return;
         const r1=14+gi*2, r2=r1+1;
-        const gcfg=cfg.groups[gi]||{course:'',time:''};
+        const gcfg=(cfg.groups&&cfg.groups[gi])||{course:'',time:''};
         const mb=idx=>grp[idx]||{name:'',company:'',score:null,isInit:false};
         // r1行: コース, 名①, 社①, スコア①, 名②, 社②, スコア②
         const cells_r1=[
@@ -2151,34 +2165,43 @@ function expXLSX(){
           ['B',gcfg.time||''],['C',mb(2).name||''],['D',mb(2).company||''],
           ['E',fmtSc(mb(2))],['F',mb(3).name||''],['G',mb(3).company||''],['H',fmtSc(mb(3))]
         ];
-        // 行XML全体を置換
+
         [[r1,cells_r1],[r2,cells_r2]].forEach(([row,cells])=>{
-          const rowRe=new RegExp(`(<row r="${row}"[^>]*>).*?(<\/row>)`,'s');
+          // 行全体を1行で検索（dotAllフラグで改行も対応）
+          const rowRe=new RegExp(`(<row r="${row}"[^>]*>)([\\s\\S]*?)(<\\/row>)`);
+          const rowMatch=sheetXml.match(rowRe);
+          if(!rowMatch) return;
+          const origInner=rowMatch[2];
+
+          // A列セル保持（通常セルと自己終了セルの両方に対応）
+          const aCellNormal=origInner.match(new RegExp(`<c r="A${row}"[^/][^>]*>[\\s\\S]*?<\\/c>`))?.[0]||'';
+          const aCellSelf  =origInner.match(new RegExp(`<c r="A${row}"[^>]*\\/>`))?.[0]||'';
+          const aCell=aCellNormal||aCellSelf;
+
+          // I・J列セル（AVERAGE/MIN数式）保持
+          const ijMatches=[...origInner.matchAll(new RegExp(`<c r="[IJ]${row}"[^>]*>[\\s\\S]*?<\\/c>`,'g'))];
+          const ijCells=ijMatches.map(m=>m[0]).join('');
+
           const cXmls=cells.map(([col,val])=>cellXml(col+row,row,col,val)).join('');
-          // A列（組番号）とI,J列（AVERAGE/MIN）は元のXMLから保持
-          const origRow=sheetXml.match(rowRe);
-          if(origRow){
-            const origInner=origRow[0].match(/<row[^>]*>(.*?)<\/row>/s)?.[1]||'';
-            // A列セル
-            const aCell=origInner.match(new RegExp(`<c r="A${row}"[^>]*>.*?</c>`))?.[0]||'';
-            // I,J列セル（AVERAGE/MIN数式）
-            const ijCells=origInner.match(new RegExp(`<c r="[IJ]${row}"[^>]*>.*?</c>`,'g'))?.join('')||'';
-            const newInner=aCell+cXmls+ijCells;
-            sheetXml=sheetXml.replace(rowRe,(m,p1,p2)=>p1+newInner+p2);
-          }
+          const newInner=aCell+cXmls+ijCells;
+          sheetXml=sheetXml.replace(rowRe,(m,p1,p2,p3)=>p1+newInner+p3);
         });
       });
 
-      // sharedStringsを更新
-      const newSis=strings.map(s=>`<si><t xml:space="preserve">${s}</t></si>`).join('');
-      const newShared=sharedXml
-        .replace(/count="\d+"/,'count="'+strings.length+'"')
-        .replace(/uniqueCount="\d+"/,'uniqueCount="'+strings.length+'"')
-        .replace(/<si>.*<\/si>/s, newSis);
+      // sharedStringsを完全再構築（XMLエスケープ適用）
+      const newSis=strings.map(s=>`<si><t xml:space="preserve">${xmlEsc(s)}</t></si>`).join('');
+      const cnt=strings.length;
+      // sst要素全体を置換して属性も正確に更新
+      const newShared=sharedXml.replace(
+        /<sst[^>]*>[\s\S]*<\/sst>/,
+        `<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${cnt}" uniqueCount="${cnt}">${newSis}</sst>`
+      );
 
       // ZIPに書き戻し
       zip.file('xl/worksheets/sheet1.xml', sheetXml);
       zip.file('xl/sharedStrings.xml', newShared);
+      // calcChain.xmlを削除（古い計算順序情報がExcelエラーの原因のため）
+      zip.remove('xl/calcChain.xml');
 
       return zip.generateAsync({type:'uint8array',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     });
