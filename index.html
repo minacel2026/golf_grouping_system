@@ -2037,38 +2037,22 @@ function expXLSX(){
   const cfg=XLSX_CFG;
 
   const RS={
-  14:{B:27,C:28,D:29,E:30,F:31,G:32,H:33},
-  15:{B:34,C:35,D:36,E:36,F:37,G:38,H:39},
-  16:{B:27,C:40,D:41,E:30,F:32,G:42,H:43},
-  17:{B:34,C:44,D:45,E:46,F:35,G:36,H:39},
-  18:{B:27,C:40,D:30,E:30,F:28,G:42,H:43},
-  19:{B:34,C:46,D:38,E:47,F:45,G:48,H:33},
-  20:{B:27,C:49,D:42,E:30,F:30,G:42,H:43},
-  21:{B:34,C:36,D:38,E:46,F:46,G:36,H:39},
-  22:{B:27,C:42,D:50,E:30,F:42,G:42,H:43},
-  23:{B:34,C:51,D:38,E:46,F:45,G:52,H:39},
-  24:{B:27,C:49,D:30,E:30,F:30,G:42,H:43},
-  25:{B:34,C:46,D:46,E:46,F:36,G:36,H:39},
-  26:{B:27,C:42,D:30,E:30,F:30,G:42,H:43},
-  27:{B:34,C:51,D:38,E:46,F:36,G:53,H:39},
-  28:{B:27,C:30,D:29,E:30,F:30,G:42,H:43},
-  29:{B:34,C:47,D:36,E:46,F:36,G:36,H:39},
-  30:{B:27,C:30,D:29,E:30,F:30,G:42,H:43},
-  31:{B:54,C:47,D:36,E:46,F:36,G:36,H:39},
-  32:{B:27,C:55,D:55,E:42,F:45,G:53,H:33},
-  33:{B:54,C:56,D:56,E:48,F:57,G:36,H:39},
-  34:{B:27,C:49,D:41,E:30,F:42,G:41,H:43},
-  35:{B:54,C:46,D:47,E:46,F:46,G:38,H:39},
-  36:{B:27,C:49,D:30,E:30,F:30,G:30,H:43},
-  37:{B:54,C:46,D:46,E:46,F:36,G:36,H:39},
-  38:{B:27,C:49,D:30,E:58,F:41,G:41,H:43},
-  39:{B:54,C:46,D:36,E:47,F:38,G:38,H:39},
-  40:{B:27,C:49,D:30,E:30,F:30,G:30,H:43},
-  41:{B:54,C:46,D:46,E:46,F:36,G:36,H:39},
-  42:{B:27,C:49,D:42,E:58,F:30,G:41,H:43},
-  43:{B:54,C:46,D:36,E:47,F:36,G:38,H:39},
-  44:{B:27,C:49,D:42,E:58,F:41,G:41,H:43},
-  45:{B:54,C:46,D:36,E:47,F:38,G:38,H:39}
+  14:{B:27,C:28,D:29,E:30,F:31,G:32,H:33},15:{B:34,C:35,D:36,E:36,F:37,G:38,H:39},
+  16:{B:27,C:40,D:41,E:30,F:32,G:42,H:43},17:{B:34,C:44,D:45,E:46,F:35,G:36,H:39},
+  18:{B:27,C:40,D:30,E:30,F:28,G:42,H:43},19:{B:34,C:46,D:38,E:47,F:45,G:48,H:33},
+  20:{B:27,C:49,D:42,E:30,F:30,G:42,H:43},21:{B:34,C:36,D:38,E:46,F:46,G:36,H:39},
+  22:{B:27,C:42,D:50,E:30,F:42,G:42,H:43},23:{B:34,C:51,D:38,E:46,F:45,G:52,H:39},
+  24:{B:27,C:49,D:30,E:30,F:30,G:42,H:43},25:{B:34,C:46,D:46,E:46,F:36,G:36,H:39},
+  26:{B:27,C:42,D:30,E:30,F:30,G:42,H:43},27:{B:34,C:51,D:38,E:46,F:36,G:53,H:39},
+  28:{B:27,C:30,D:29,E:30,F:30,G:42,H:43},29:{B:34,C:47,D:36,E:46,F:36,G:36,H:39},
+  30:{B:27,C:30,D:29,E:30,F:30,G:42,H:43},31:{B:54,C:47,D:36,E:46,F:36,G:36,H:39},
+  32:{B:27,C:55,D:55,E:42,F:45,G:53,H:33},33:{B:54,C:56,D:56,E:48,F:57,G:36,H:39},
+  34:{B:27,C:49,D:41,E:30,F:42,G:41,H:43},35:{B:54,C:46,D:47,E:46,F:46,G:38,H:39},
+  36:{B:27,C:49,D:30,E:30,F:30,G:30,H:43},37:{B:54,C:46,D:46,E:46,F:36,G:36,H:39},
+  38:{B:27,C:49,D:30,E:58,F:41,G:41,H:43},39:{B:54,C:46,D:36,E:47,F:38,G:38,H:39},
+  40:{B:27,C:49,D:30,E:30,F:30,G:30,H:43},41:{B:54,C:46,D:46,E:46,F:36,G:36,H:39},
+  42:{B:27,C:49,D:42,E:58,F:30,G:41,H:43},43:{B:54,C:46,D:36,E:47,F:36,G:38,H:39},
+  44:{B:27,C:49,D:42,E:58,F:41,G:41,H:43},45:{B:54,C:46,D:36,E:47,F:38,G:38,H:39}
 };
 
   function xmlEsc(s){
@@ -2092,7 +2076,9 @@ function expXLSX(){
     return Promise.all([
       zip.file('xl/worksheets/sheet1.xml').async('string'),
       zip.file('xl/sharedStrings.xml').async('string'),
-    ]).then(([sheetXml, sharedXml])=>{
+      zip.file('[Content_Types].xml').async('string'),
+      zip.file('xl/_rels/workbook.xml.rels').async('string'),
+    ]).then(([sheetXml, sharedXml, ctXml, relsXml])=>{
 
       const siMatches=[...sharedXml.matchAll(/<si>([\s\S]*?)<\/si>/g)];
       const strings=siMatches.map(m=>{
@@ -2167,17 +2153,16 @@ function expXLSX(){
           const ei=sheetXml.indexOf('</row>',si)+6;
           const origRow=sheetXml.slice(si,ei);
           const aCellM=origRow.match(new RegExp(`<c r="A${row}"[^>]*/>`))
-            ||origRow.match(new RegExp(`<c r="A${row}"[^>]*>[\s\S]*?</c>`));
+            ||origRow.match(new RegExp(`<c r="A${row}"[^>]*>[\\s\\S]*?</c>`));
           const aCell=aCellM?aCellM[0]:'';
-          const ijCells=(origRow.match(new RegExp(`<c r="[IJ]${row}"[^>]*>[\s\S]*?</c>`,'g'))||[]).join('');
-          const rowOpenEnd=origRow.indexOf('>');
-          const rowOpen=origRow.slice(0,rowOpenEnd+1);
+          const ijCells=(origRow.match(new RegExp(`<c r="[IJ]${row}"[^>]*>[\\s\\S]*?</c>`,'g'))||[]).join('');
+          const rowOpen=origRow.slice(0,origRow.indexOf('>')+1);
           const newRow=rowOpen+aCell+cells.map(([col,v])=>cellXml(col+row,row,col,v)).join('')+ijCells+'</row>';
           sheetXml=sheetXml.slice(0,si)+newRow+sheetXml.slice(ei);
         });
       });
 
-      // sharedStrings更新（XMLエスケープ適用・スライス方式で確実に置換）
+      // sharedStrings更新
       const cnt=strings.length;
       const newSis=strings.map(s=>`<si><t xml:space="preserve">${xmlEsc(s)}</t></si>`).join('');
       const siStart=sharedXml.indexOf('<si>');
@@ -2187,9 +2172,15 @@ function expXLSX(){
         .replace(/count="\d+"/,`count="${cnt}"`)
         .replace(/uniqueCount="\d+"/,`uniqueCount="${cnt}"`);
 
-      // calcChain.xmlはテンプレートのまま変更しない（数式セルは保持済みのため）
+      // ★calcChain完全削除：ファイルを書かない＋参照も2箇所から削除
+      const ctFixed=ctXml.replace(/<Override[^>]*calcChain[^>]*\/>/,'');
+      const relsFixed=relsXml.replace(/<Relationship[^>]*calcChain[^>]*\/>/,'');
+
       zip.file('xl/worksheets/sheet1.xml', sheetXml);
       zip.file('xl/sharedStrings.xml', newShared);
+      zip.file('[Content_Types].xml', ctFixed);
+      zip.file('xl/_rels/workbook.xml.rels', relsFixed);
+      zip.remove('xl/calcChain.xml');
 
       return zip.generateAsync({type:'uint8array',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     });
@@ -2198,7 +2189,7 @@ function expXLSX(){
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
     const evtTag=cfg.title||document.getElementById('event-tag')?.textContent||'宮崎工業杯';
-    a.download='組み合わせ_'+evtTag.replace(/[\/\:*?"<>|]/g,'_')+'.xlsx';
+    a.download='組み合わせ_'+evtTag.replace(/[\/\\:*?"<>|]/g,'_')+'.xlsx';
     a.click();
     URL.revokeObjectURL(a.href);
   }).catch(e=>{alert('Excel出力エラー: '+e.message);console.error(e);});
