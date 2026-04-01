@@ -318,7 +318,7 @@ input[type=range]{width:100%;accent-color:var(--g2)}
     <button class="btn g" onclick="renderSum()">🔄 集計を更新</button>
     <button class="btn" onclick="expSumCSV()">📥 CSV出力</button>
     <input type="text" id="sumLabel" placeholder="保存名（例: 第21回 参加集計）" style="width:200px;padding:4px 8px;font-size:11px;border:1px solid var(--bd);border-radius:6px">
-    <select id="sumFolSel" style="padding:4px 6px;font-size:11px;border:1px solid var(--bd);border-radius:6px" onclick="this.innerHTML='<option value="">-- フォルダ選択 --</option>'+FOLDERS.sort((a,b)=>b.date.localeCompare(a.date)).map(f=>'<option value="'+f.id+'">'+f.name+'</option>').join('')">
+    <select id="sumFolSel" style="padding:4px 6px;font-size:11px;border:1px solid var(--bd);border-radius:6px">
       <option value="">-- フォルダ選択 --</option>
     </select>
     <button class="btn p" onclick="saveSumToFolder()">💾 フォルダに保存</button>
@@ -1165,6 +1165,14 @@ function impCurrent(){
 // === 参加者集計 ===
 // =============================================
 function renderSum(){
+  // フォルダ選択を最新状態に更新（タブ切替・更新ボタンのたびに反映）
+  const _sel=document.getElementById('sumFolSel');
+  if(_sel){
+    const _cur=_sel.value;
+    _sel.innerHTML='<option value="">-- フォルダ選択 --</option>'
+      +FOLDERS.sort((a,b)=>b.date.localeCompare(a.date))
+        .map(f=>'<option value="'+f.id+'"'+(f.id===_cur?' selected':'')+'>'+f.name+'</option>').join('');
+  }
   const ac=P.filter(p=>p.attend).sort((a,b)=>(a.no||9999)-(b.no||9999));
   // 会社別集計
   const byCoMap={};
