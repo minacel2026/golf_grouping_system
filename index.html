@@ -317,6 +317,11 @@ input[type=range]{width:100%;accent-color:var(--g2)}
   <div class="tb">
     <button class="btn g" onclick="renderSum()">🔄 集計を更新</button>
     <button class="btn" onclick="expSumCSV()">📥 CSV出力</button>
+    <select id="sumFolSel" style="padding:4px 6px;font-size:11px;border:1px solid var(--bd);border-radius:6px" onclick="this.innerHTML='<option value="">-- フォルダ選択 --</option>'+FOLDERS.sort((a,b)=>b.date.localeCompare(a.date)).map(f=>'<option value="'+f.id+'">'+f.name+'</option>').join('')">
+      <option value="">-- フォルダ選択 --</option>
+    </select>
+    <button class="btn p" onclick="saveSumToFolder()">💾 フォルダに保存</button>
+    <span id="sum-saved-msg" style="font-size:11px;color:var(--g2)"></span>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
     <div>
@@ -1184,6 +1189,29 @@ function expSumCSV(){
   const rows=[['No.','氏名','性別','会社名','GROSSスコア']];
   ac.forEach((p,i)=>rows.push([p.no||i+1,p.name,isF(p.name)?'女':'男',p.company,p.score&&p.score!==100?p.score:'']));
   dlCSV(rows,'参加者集計.csv');
+}
+function saveSumToFolder(){
+  const fid=document.getElementById('sumFolSel').value;
+  if(!fid){alert('保存先フォルダを選択してください');return;}
+  const folder=FOLDERS.find(f=>f.id===fid);
+  if(!folder){alert('フォルダが見つかりません');return;}
+  const ac=P.filter(p=>p.attend).sort((a,b)=>(a.no||9999)-(b.no||9999));
+  if(!ac.length){alert('参加者がいません');return;}
+  const label='参加集計（'+ac.length+'名）';
+  const existing=folder.files.findIndex(f=>f.type==='summary');
+  if(existing>=0){
+    if(!confirm('すでに参加集計が保存されています。上書きしますか？'))return;
+    folder.files.splice(existing,1);
+  }
+  folder.files.push({
+    type:'summary',
+    label:label,
+    data:ac.map(p=>({no:p.no,name:p.name,company:p.company,score:p.score,isInit:p.isInit})),
+    savedAt:new Date().toISOString()
+  });
+  sv();
+  const msg=document.getElementById('sum-saved-msg');
+  if(msg){msg.textContent='✅ '+folder.name+' に保存しました';setTimeout(()=>{msg.textContent='';},3000);}
 }
 function dlCSV(rows,fname){
   const csv='\uFEFF'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -2353,9 +2381,9 @@ function renderFolders(){
     }else{
       html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">';
       folder.files.forEach((fi,idx)=>{
-        const icon=fi.type==='ranking'?'🏆':fi.type==='notice'?'📝':'🏌️';
-        const typeLabel=fi.type==='ranking'?'順位表':fi.type==='notice'?'案内文':'組み合わせ表';
-        const cnt=fi.type==='ranking'?fi.data.length+'名':fi.type==='notice'?'':''+fi.data.length+'組';
+        const icon=fi.type==='ranking'?'🏆':fi.type==='notice'?'📝':fi.type==='summary'?'👥':'🏌️';
+        const typeLabel=fi.type==='ranking'?'順位表':fi.type==='notice'?'案内文':fi.type==='summary'?'参加集計':'組み合わせ表';
+        const cnt=fi.type==='ranking'?fi.data.length+'名':fi.type==='summary'?fi.data.length+'名':fi.type==='notice'?'':''+fi.data.length+'組';
         const savedAt=fi.savedAt?new Date(fi.savedAt).toLocaleDateString('ja-JP'):'';
         const esc_fid=folder.id.replace(/'/g,"\\'");
         html+='<div style="position:relative">'+
@@ -2433,7 +2461,9 @@ function showFileDetail(fid,idx){
   const folder=FOLDERS.find(f=>f.id===fid);
   if(!folder||!folder.files[idx])return;
   const fi=folder.files[idx];
-  if(fi.type==='ranking'){
+  if(fi.type==='summary'){
+    alert('📋 '+fi.label+'\n\n'+fi.data.slice(0,10).map((p,i)=>`${p.no||i+1}. ${p.name}（${p.company}）`).join('\n')+(fi.data.length>10?'\n... 他'+(fi.data.length-10)+'名':''));
+  } else if(fi.type==='ranking'){
     const rows=[['順位','氏名','スコア'],...fi.data.map((d,i)=>[i+1,d.name,d.score])];
     const s=rows.map(r=>r.join('\t')).join('\n');
     alert('📊 '+fi.label+'\n\n'+fi.data.slice(0,10).map((d,i)=>`${i+1}. ${d.name} ${d.score}`).join('\n')+(fi.data.length>10?'\n... 他'+(fi.data.length-10)+'名':''));
