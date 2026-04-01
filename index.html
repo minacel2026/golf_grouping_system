@@ -317,6 +317,7 @@ input[type=range]{width:100%;accent-color:var(--g2)}
   <div class="tb">
     <button class="btn g" onclick="renderSum()">🔄 集計を更新</button>
     <button class="btn" onclick="expSumCSV()">📥 CSV出力</button>
+    <input type="text" id="sumLabel" placeholder="保存名（例: 第21回 参加集計）" style="width:200px;padding:4px 8px;font-size:11px;border:1px solid var(--bd);border-radius:6px">
     <select id="sumFolSel" style="padding:4px 6px;font-size:11px;border:1px solid var(--bd);border-radius:6px" onclick="this.innerHTML='<option value="">-- フォルダ選択 --</option>'+FOLDERS.sort((a,b)=>b.date.localeCompare(a.date)).map(f=>'<option value="'+f.id+'">'+f.name+'</option>').join('')">
       <option value="">-- フォルダ選択 --</option>
     </select>
@@ -1197,10 +1198,11 @@ function saveSumToFolder(){
   if(!folder){alert('フォルダが見つかりません');return;}
   const ac=P.filter(p=>p.attend).sort((a,b)=>(a.no||9999)-(b.no||9999));
   if(!ac.length){alert('参加者がいません');return;}
-  const label='参加集計（'+ac.length+'名）';
-  const existing=folder.files.findIndex(f=>f.type==='summary');
+  const labelInput=document.getElementById('sumLabel').value.trim();
+  const label=labelInput||'参加集計（'+ac.length+'名）';
+  const existing=folder.files.findIndex(f=>f.type==='summary'&&f.label===label);
   if(existing>=0){
-    if(!confirm('すでに参加集計が保存されています。上書きしますか？'))return;
+    if(!confirm('「'+label+'」はすでに保存されています。上書きしますか？'))return;
     folder.files.splice(existing,1);
   }
   folder.files.push({
