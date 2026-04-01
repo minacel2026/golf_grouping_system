@@ -1964,9 +1964,16 @@ function initDrag(){
       if(!src)return;
       const tgi=+el.dataset.gi, tpi=+el.dataset.pi;
       if(src.gi===tgi&&src.pi===tpi){src=null;return;}
-      const tmp=GR[src.gi][src.pi];
-      GR[src.gi][src.pi]=GR[tgi][tpi];
-      GR[tgi][tpi]=tmp;
+      if(GR[tgi].length<4){
+        // ターゲットが3人以下→移動（ソースから抜いてターゲットに追加）
+        const p=GR[src.gi].splice(src.pi,1)[0];
+        GR[tgi].splice(tpi,0,p);
+      } else {
+        // ターゲットが4人→入れ替え
+        const tmp=GR[src.gi][src.pi];
+        GR[src.gi][src.pi]=GR[tgi][tpi];
+        GR[tgi][tpi]=tmp;
+      }
       src=null;
       renderResult(0,_lastHasPast);
     });
@@ -1974,7 +1981,20 @@ function initDrag(){
   document.querySelectorAll('#gg .gbdy').forEach(body=>{
     body.addEventListener('dragover',e=>{e.preventDefault();body.classList.add('dg-over');});
     body.addEventListener('dragleave',e=>{if(!body.contains(e.relatedTarget))body.classList.remove('dg-over');});
-    body.addEventListener('drop',e=>{e.preventDefault();body.classList.remove('dg-over');});
+    body.addEventListener('drop',e=>{
+      e.preventDefault();body.classList.remove('dg-over');
+      if(!src)return;
+      const tgi=+body.dataset.gi;
+      if(src.gi===tgi){src=null;return;}
+      if(GR[tgi].length<4){
+        // 空きスペースへのドロップ→移動
+        const p=GR[src.gi].splice(src.pi,1)[0];
+        GR[tgi].push(p);
+        src=null;
+        renderResult(0,_lastHasPast);
+      }
+      src=null;
+    });
   });
 }
 function saveRes(){
