@@ -1902,9 +1902,8 @@ function generate(){
 }
 
 function renderResult(score,hasPast){
-  _lastHasPast=hasPast; // ドラッグ後の再描画のために保存
+  _lastHasPast=hasPast;
   const warns=[];
-  // 全体平均スコア（100点込み）
   const _allp=P.filter(p=>p.attend&&p.score&&p.score>60);
   const totalAvg=_allp.length?Math.round(_allp.reduce((s,p)=>s+p.score,0)/_allp.length):100;
   const wbox=document.getElementById('wbox');
@@ -1944,16 +1943,11 @@ function renderResult(score,hasPast){
   }).join('');
   if(warns.length){wbox.style.display='block';wbox.innerHTML='⚠ '+warns.join(' ／ ');}
   else wbox.style.display='none';
-  initDrag(); // ドラッグ＆ドロップを初期化
+  initDrag();
 }
 
-// =============================================
-// === ドラッグ＆ドロップ ===
-// =============================================
 function initDrag(){
-  let src=null; // {gi, pi}
-
-  // 各メンバー行にドラッグイベント設定
+  let src=null;
   document.querySelectorAll('#gg .mr[draggable]').forEach(el=>{
     el.addEventListener('dragstart',e=>{
       src={gi:+el.dataset.gi, pi:+el.dataset.pi};
@@ -1964,17 +1958,12 @@ function initDrag(){
       document.querySelectorAll('#gg .mr.dg-ing').forEach(x=>x.classList.remove('dg-ing'));
       document.querySelectorAll('#gg .gbdy.dg-over').forEach(x=>x.classList.remove('dg-over'));
     });
-    el.addEventListener('dragover',e=>{
-      e.preventDefault();
-      e.dataTransfer.dropEffect='move';
-    });
+    el.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='move';});
     el.addEventListener('drop',e=>{
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault();e.stopPropagation();
       if(!src)return;
       const tgi=+el.dataset.gi, tpi=+el.dataset.pi;
       if(src.gi===tgi&&src.pi===tpi){src=null;return;}
-      // 2人をスワップ
       const tmp=GR[src.gi][src.pi];
       GR[src.gi][src.pi]=GR[tgi][tpi];
       GR[tgi][tpi]=tmp;
@@ -1982,21 +1971,10 @@ function initDrag(){
       renderResult(0,_lastHasPast);
     });
   });
-
-  // グループ本体（空白部分へのドロップ対応）
   document.querySelectorAll('#gg .gbdy').forEach(body=>{
-    body.addEventListener('dragover',e=>{
-      e.preventDefault();
-      body.classList.add('dg-over');
-    });
-    body.addEventListener('dragleave',e=>{
-      if(!body.contains(e.relatedTarget)) body.classList.remove('dg-over');
-    });
-    body.addEventListener('drop',e=>{
-      e.preventDefault();
-      body.classList.remove('dg-over');
-      // .mrへのドロップは.mrのhandlerで処理済み
-    });
+    body.addEventListener('dragover',e=>{e.preventDefault();body.classList.add('dg-over');});
+    body.addEventListener('dragleave',e=>{if(!body.contains(e.relatedTarget))body.classList.remove('dg-over');});
+    body.addEventListener('drop',e=>{e.preventDefault();body.classList.remove('dg-over');});
   });
 }
 function saveRes(){
@@ -2097,43 +2075,30 @@ function expXLSX(){
   if(typeof JSZip==='undefined'){alert('JSZipライブラリが読み込まれていません');return;}
   const cfg=XLSX_CFG;
 
-  // 各行C〜H列のスタイル番号マップ（罫線保持用）
   const RS={
-  14:{B:27,C:28,D:29,E:30,F:31,G:32,H:33},
-  15:{B:34,C:35,D:36,E:36,F:37,G:38,H:39},
-  16:{B:27,C:40,D:41,E:30,F:32,G:42,H:43},
-  17:{B:34,C:44,D:45,E:46,F:35,G:36,H:39},
-  18:{B:27,C:40,D:30,E:30,F:28,G:42,H:43},
-  19:{B:34,C:46,D:38,E:47,F:45,G:48,H:33},
-  20:{B:27,C:49,D:42,E:30,F:30,G:42,H:43},
-  21:{B:34,C:36,D:38,E:46,F:46,G:36,H:39},
-  22:{B:27,C:42,D:50,E:30,F:42,G:42,H:43},
-  23:{B:34,C:51,D:38,E:46,F:45,G:52,H:39},
-  24:{B:27,C:49,D:30,E:30,F:30,G:42,H:43},
-  25:{B:34,C:46,D:46,E:46,F:36,G:36,H:39},
-  26:{B:27,C:42,D:30,E:30,F:30,G:42,H:43},
-  27:{B:34,C:51,D:38,E:46,F:36,G:53,H:39},
-  28:{B:27,C:30,D:29,E:30,F:30,G:42,H:43},
-  29:{B:34,C:47,D:36,E:46,F:36,G:36,H:39},
-  30:{B:27,C:30,D:29,E:30,F:30,G:42,H:43},
-  31:{B:54,C:47,D:36,E:46,F:36,G:36,H:39},
-  32:{B:27,C:55,D:55,E:42,F:45,G:53,H:33},
-  33:{B:54,C:56,D:56,E:48,F:57,G:36,H:39},
-  34:{B:27,C:49,D:41,E:30,F:42,G:41,H:43},
-  35:{B:54,C:46,D:47,E:46,F:46,G:38,H:39},
-  36:{B:27,C:49,D:30,E:30,F:30,G:30,H:43},
-  37:{B:54,C:46,D:46,E:46,F:36,G:36,H:39},
-  38:{B:27,C:49,D:30,E:58,F:41,G:41,H:43},
-  39:{B:54,C:46,D:36,E:47,F:38,G:38,H:39},
-  40:{B:27,C:49,D:30,E:30,F:30,G:30,H:43},
-  41:{B:54,C:46,D:46,E:46,F:36,G:36,H:39},
-  42:{B:27,C:49,D:42,E:58,F:30,G:41,H:43},
-  43:{B:54,C:46,D:36,E:47,F:36,G:38,H:39},
-  44:{B:27,C:49,D:42,E:58,F:41,G:41,H:43},
-  45:{B:54,C:46,D:36,E:47,F:38,G:38,H:39}
+  14:{B:27,C:28,D:29,E:30,F:31,G:32,H:33},15:{B:34,C:35,D:36,E:36,F:37,G:38,H:39},
+  16:{B:27,C:40,D:41,E:30,F:32,G:42,H:43},17:{B:34,C:44,D:45,E:46,F:35,G:36,H:39},
+  18:{B:27,C:40,D:30,E:30,F:28,G:42,H:43},19:{B:34,C:46,D:38,E:47,F:45,G:48,H:33},
+  20:{B:27,C:49,D:42,E:30,F:30,G:42,H:43},21:{B:34,C:36,D:38,E:46,F:46,G:36,H:39},
+  22:{B:27,C:42,D:50,E:30,F:42,G:42,H:43},23:{B:34,C:51,D:38,E:46,F:45,G:52,H:39},
+  24:{B:27,C:49,D:30,E:30,F:30,G:42,H:43},25:{B:34,C:46,D:46,E:46,F:36,G:36,H:39},
+  26:{B:27,C:42,D:30,E:30,F:30,G:42,H:43},27:{B:34,C:51,D:38,E:46,F:36,G:53,H:39},
+  28:{B:27,C:30,D:29,E:30,F:30,G:42,H:43},29:{B:34,C:47,D:36,E:46,F:36,G:36,H:39},
+  30:{B:27,C:30,D:29,E:30,F:30,G:42,H:43},31:{B:54,C:47,D:36,E:46,F:36,G:36,H:39},
+  32:{B:27,C:55,D:55,E:42,F:45,G:53,H:33},33:{B:54,C:56,D:56,E:48,F:57,G:36,H:39},
+  34:{B:27,C:49,D:41,E:30,F:42,G:41,H:43},35:{B:54,C:46,D:47,E:46,F:46,G:38,H:39},
+  36:{B:27,C:49,D:30,E:30,F:30,G:30,H:43},37:{B:54,C:46,D:46,E:46,F:36,G:36,H:39},
+  38:{B:27,C:49,D:30,E:58,F:41,G:41,H:43},39:{B:54,C:46,D:36,E:47,F:38,G:38,H:39},
+  40:{B:27,C:49,D:30,E:30,F:30,G:30,H:43},41:{B:54,C:46,D:46,E:46,F:36,G:36,H:39},
+  42:{B:27,C:49,D:42,E:58,F:30,G:41,H:43},43:{B:54,C:46,D:36,E:47,F:36,G:38,H:39},
+  44:{B:27,C:49,D:42,E:58,F:41,G:41,H:43},45:{B:54,C:46,D:36,E:47,F:38,G:38,H:39}
 };
 
-  // スコア書式化
+  function xmlEsc(s){
+    return String(s===null||s===undefined?'':s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
   function fmtSc(p){
     if(!p||!p.name)return null;
     if(p.isInit)return '初';
@@ -2141,7 +2106,6 @@ function expXLSX(){
     return null;
   }
 
-  // テンプレートをJSZipで展開しXMLを直接書き換え
   const bstr=atob(_TMPL_B64);
   const arr=new Uint8Array(bstr.length);
   for(let i=0;i<bstr.length;i++)arr[i]=bstr.charCodeAt(i);
@@ -2150,16 +2114,15 @@ function expXLSX(){
     return Promise.all([
       zip.file('xl/worksheets/sheet1.xml').async('string'),
       zip.file('xl/sharedStrings.xml').async('string'),
-    ]).then(([sheetXml, sharedXml])=>{
+      zip.file('[Content_Types].xml').async('string'),
+      zip.file('xl/_rels/workbook.xml.rels').async('string'),
+    ]).then(([sheetXml, sharedXml, ctXml, relsXml])=>{
 
-      // sharedStringsから既存エントリを取得
-      const siMatches=[...sharedXml.matchAll(/<si>(.*?)<\/si>/gs)];
+      const siMatches=[...sharedXml.matchAll(/<si>([\s\S]*?)<\/si>/g)];
       const strings=siMatches.map(m=>{
         const t=m[1].match(/<t[^>]*>([^<]*)<\/t>/);
         return t?t[1]:'';
       });
-
-      // 文字列を追加またはインデックスを取得
       function strIdx(val){
         if(val===null||val===undefined||val==='')return -1;
         const s=String(val);
@@ -2167,24 +2130,32 @@ function expXLSX(){
         if(idx===-1){idx=strings.length;strings.push(s);}
         return idx;
       }
-
-      // セルXMLを生成（s属性でスタイル番号保持→罫線が保持される）
       function cellXml(addr,row,col,val){
         const s=(RS[row]&&RS[row][col])||0;
-        const sAttr=s?` s="${s}"`:'';
-        if(val===null||val===undefined||val==='')
-          return `<c r="${addr}"${sAttr}/>`;
-        if(typeof val==='number')
-          return `<c r="${addr}"${sAttr}><v>${val}</v></c>`;
-        const idx=strIdx(val);
-        return `<c r="${addr}"${sAttr} t="s"><v>${idx}</v></c>`;
+        const sa=s?` s="${s}"`:'';
+        if(val===null||val===undefined||val==='') return `<c r="${addr}"${sa}/>`;
+        if(typeof val==='number') return `<c r="${addr}"${sa}><v>${val}</v></c>`;
+        const idx=strIdx(String(val));
+        if(idx<0) return `<c r="${addr}"${sa}/>`;
+        return `<c r="${addr}"${sa} t="s"><v>${idx}</v></c>`;
       }
-
-      // ヘッダー情報を書き換え（sharedStrings経由）
-      function replaceHdrCell(xml,addr,val,sAttr){
-        const idx=strIdx(val);
-        const re=new RegExp(`<c r="${addr}"([^>]*)>(?:<[fv]>[^<]*</[fv]>)?</c>`,'g');
-        return xml.replace(re,`<c r="${addr}"${sAttr} t="s"><v>${idx}</v></c>`);
+      function replaceHdrCell(xml,addr,val,sa){
+        if(!val) return xml;
+        const idx=strIdx(String(val));
+        if(idx<0) return xml;
+        const start='<c r="'+addr+'"';
+        let pos=xml.indexOf(start);
+        while(pos>=0){
+          const se=xml.indexOf('/>',pos),te=xml.indexOf('>',pos);
+          if(se>=0&&se<=te){
+            xml=xml.slice(0,pos)+`<c r="${addr}"${sa} t="s"><v>${idx}</v></c>`+xml.slice(se+2);
+          } else {
+            const ce=xml.indexOf('</c>',te)+4;
+            xml=xml.slice(0,pos)+`<c r="${addr}"${sa} t="s"><v>${idx}</v></c>`+xml.slice(ce);
+          }
+          pos=xml.indexOf(start,pos+1);
+        }
+        return xml;
       }
       sheetXml=replaceHdrCell(sheetXml,'A1', cfg.title||'', ' s="1"');
       sheetXml=replaceHdrCell(sheetXml,'C3', cfg.venue||'', ' s="7"');
@@ -2196,50 +2167,54 @@ function expXLSX(){
       sheetXml=replaceHdrCell(sheetXml,'C9', cfg.recepTime||'', ' s="12"');
       sheetXml=replaceHdrCell(sheetXml,'A10', cfg.note||'', ' s="19"');
 
-      // グループ行を書き換え
       GR.forEach((grp,gi)=>{
         if(gi>=16)return;
         const r1=14+gi*2, r2=r1+1;
-        const gcfg=cfg.groups[gi]||{course:'',time:''};
-        const mb=idx=>grp[idx]||{name:'',company:'',score:null,isInit:false};
-        // r1行: コース, 名①, 社①, スコア①, 名②, 社②, スコア②
+        const gcfg=(cfg.groups&&cfg.groups[gi])||{course:'',time:''};
+        const mb=i=>grp[i]||{name:'',company:'',score:null,isInit:false};
         const cells_r1=[
           ['B',gcfg.course||''],['C',mb(0).name||''],['D',mb(0).company||''],
           ['E',fmtSc(mb(0))],['F',mb(1).name||''],['G',mb(1).company||''],['H',fmtSc(mb(1))]
         ];
-        // r2行: 時間, 名③, 社③, スコア③, 名④, 社④, スコア④
         const cells_r2=[
           ['B',gcfg.time||''],['C',mb(2).name||''],['D',mb(2).company||''],
           ['E',fmtSc(mb(2))],['F',mb(3).name||''],['G',mb(3).company||''],['H',fmtSc(mb(3))]
         ];
-        // 行XML全体を置換
         [[r1,cells_r1],[r2,cells_r2]].forEach(([row,cells])=>{
-          const rowRe=new RegExp(`(<row r="${row}"[^>]*>).*?(<\/row>)`,'s');
-          const cXmls=cells.map(([col,val])=>cellXml(col+row,row,col,val)).join('');
-          // A列（組番号）とI,J列（AVERAGE/MIN）は元のXMLから保持
-          const origRow=sheetXml.match(rowRe);
-          if(origRow){
-            const origInner=origRow[0].match(/<row[^>]*>(.*?)<\/row>/s)?.[1]||'';
-            // A列セル
-            const aCell=origInner.match(new RegExp(`<c r="A${row}"[^>]*>.*?</c>`))?.[0]||'';
-            // I,J列セル（AVERAGE/MIN数式）
-            const ijCells=origInner.match(new RegExp(`<c r="[IJ]${row}"[^>]*>.*?</c>`,'g'))?.join('')||'';
-            const newInner=aCell+cXmls+ijCells;
-            sheetXml=sheetXml.replace(rowRe,(m,p1,p2)=>p1+newInner+p2);
-          }
+          const startTag=`<row r="${row}"`;
+          const si=sheetXml.indexOf(startTag);
+          if(si<0)return;
+          const ei=sheetXml.indexOf('</row>',si)+6;
+          const origRow=sheetXml.slice(si,ei);
+          const aCellM=origRow.match(new RegExp(`<c r="A${row}"[^>]*/>`))
+            ||origRow.match(new RegExp(`<c r="A${row}"[^>]*>[\\s\\S]*?</c>`));
+          const aCell=aCellM?aCellM[0]:'';
+          const ijCells=(origRow.match(new RegExp(`<c r="[IJ]${row}"[^>]*>[\\s\\S]*?</c>`,'g'))||[]).join('');
+          const rowOpen=origRow.slice(0,origRow.indexOf('>')+1);
+          const newRow=rowOpen+aCell+cells.map(([col,v])=>cellXml(col+row,row,col,v)).join('')+ijCells+'</row>';
+          sheetXml=sheetXml.slice(0,si)+newRow+sheetXml.slice(ei);
         });
       });
 
-      // sharedStringsを更新
-      const newSis=strings.map(s=>`<si><t xml:space="preserve">${s}</t></si>`).join('');
-      const newShared=sharedXml
-        .replace(/count="\d+"/,'count="'+strings.length+'"')
-        .replace(/uniqueCount="\d+"/,'uniqueCount="'+strings.length+'"')
-        .replace(/<si>.*<\/si>/s, newSis);
+      // sharedStrings更新
+      const cnt=strings.length;
+      const newSis=strings.map(s=>`<si><t xml:space="preserve">${xmlEsc(s)}</t></si>`).join('');
+      const siStart=sharedXml.indexOf('<si>');
+      const siEnd=sharedXml.lastIndexOf('</si>')+5;
+      let newShared=sharedXml.slice(0,siStart)+newSis+sharedXml.slice(siEnd);
+      newShared=newShared
+        .replace(/count="\d+"/,`count="${cnt}"`)
+        .replace(/uniqueCount="\d+"/,`uniqueCount="${cnt}"`);
 
-      // ZIPに書き戻し
+      // ★calcChain完全削除：ファイル削除＋Content_Types＋relsの参照も削除
+      const ctFixed=ctXml.replace(/<Override[^>]*calcChain[^>]*\/>/,'');
+      const relsFixed=relsXml.replace(/<Relationship[^>]*calcChain[^>]*\/>/,'');
+
       zip.file('xl/worksheets/sheet1.xml', sheetXml);
       zip.file('xl/sharedStrings.xml', newShared);
+      zip.file('[Content_Types].xml', ctFixed);
+      zip.file('xl/_rels/workbook.xml.rels', relsFixed);
+      zip.remove('xl/calcChain.xml');
 
       return zip.generateAsync({type:'uint8array',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     });
@@ -2253,8 +2228,6 @@ function expXLSX(){
     URL.revokeObjectURL(a.href);
   }).catch(e=>{alert('Excel出力エラー: '+e.message);console.error(e);});
 }
-
-
 function renderFolders(){
   const nav=document.getElementById('folder-nav');
   const view=document.getElementById('folder-view');
