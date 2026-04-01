@@ -2472,7 +2472,12 @@ function showFileDetail(fid,idx){
   if(!folder||!folder.files[idx])return;
   const fi=folder.files[idx];
   if(fi.type==='summary'){
-    alert('📋 '+fi.label+'\n\n'+fi.data.slice(0,10).map((p,i)=>`${p.no||i+1}. ${p.name}（${p.company}）`).join('\n')+(fi.data.length>10?'\n... 他'+(fi.data.length-10)+'名':''));
+    const preview=fi.data.slice(0,10).map((p,i)=>`${p.no||i+1}. ${p.name}（${p.company}）`).join('\n')+(fi.data.length>10?'\n... 他'+(fi.data.length-10)+'名':'');
+    if(confirm('📋 '+fi.label+'\n\n'+preview+'\n\nCSVとして出力しますか？')){
+      const rows=[['No.','氏名','性別','会社名','GROSSスコア']];
+      fi.data.forEach((p,i)=>rows.push([p.no||i+1,p.name,isF(p.name)?'女':'男',p.company,p.isInit?'初(100)':(p.score&&p.score!==100?p.score:'')]));
+      dlCSV(rows,(fi.label||'参加集計')+'.csv');
+    }
   } else if(fi.type==='ranking'){
     const rows=[['順位','氏名','スコア'],...fi.data.map((d,i)=>[i+1,d.name,d.score])];
     const s=rows.map(r=>r.join('\t')).join('\n');
