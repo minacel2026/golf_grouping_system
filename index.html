@@ -1919,7 +1919,6 @@ function renderResult(score,hasPast){
     if(hw)warns.push(`第${i+1}組に女性${fc}人`);
     if(sameCo)warns.push(`第${i+1}組に同会社重複`);
     const avg=g.length?Math.round(g.reduce((a,p)=>a+p.score,0)/g.length):0;
-    const[cr,tm]=COURSES[i]||['',''];
     const mems=g.map((p,mi)=>{
       const f=isF(p.name);
       const pw=g.filter(q=>q!==p).map(q=>{const c=PH[pk(norm(p.name),norm(q.name))]||0;return c>0?norm(q.name).slice(0,3)+'×'+c:null;}).filter(Boolean);
@@ -1933,7 +1932,7 @@ function renderResult(score,hasPast){
       <div class="ghead"><span>第${i+1}組</span>
         ${hw?'<span class="bdg w">⚠女性'+fc+'人</span>':''}
         ${sameCo?'<span class="bdg w">⚠同社</span>':''}
-        <span class="cr">${cr} ${tm}</span></div>
+        </div>
       <div class="gbdy" data-gi="${i}">${mems}</div>
       <div class="atg" style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:10px;color:#aaa">グループ平均スコア</span>
@@ -1947,7 +1946,10 @@ function renderResult(score,hasPast){
 }
 
 function initDrag(){
-  let src=null;
+  let src=null;   // メンバードラッグ用 {gi, pi}
+  let srcGrp=null; // グループドラッグ用 {gi}
+
+  // ===== メンバー行のD&D =====
   document.querySelectorAll('#gg .mr[draggable]').forEach(el=>{
     el.addEventListener('dragstart',e=>{
       src={gi:+el.dataset.gi, pi:+el.dataset.pi};
@@ -1965,11 +1967,9 @@ function initDrag(){
       const tgi=+el.dataset.gi, tpi=+el.dataset.pi;
       if(src.gi===tgi&&src.pi===tpi){src=null;return;}
       if(GR[tgi].length<4){
-        // ターゲットが3人以下→移動（ソースから抜いてターゲットに追加）
         const p=GR[src.gi].splice(src.pi,1)[0];
         GR[tgi].splice(tpi,0,p);
       } else {
-        // ターゲットが4人→入れ替え
         const tmp=GR[src.gi][src.pi];
         GR[src.gi][src.pi]=GR[tgi][tpi];
         GR[tgi][tpi]=tmp;
@@ -1987,13 +1987,49 @@ function initDrag(){
       const tgi=+body.dataset.gi;
       if(src.gi===tgi){src=null;return;}
       if(GR[tgi].length<4){
-        // 空きスペースへのドロップ→移動
         const p=GR[src.gi].splice(src.pi,1)[0];
         GR[tgi].push(p);
         src=null;
         renderResult(0,_lastHasPast);
       }
       src=null;
+    });
+  });
+
+  // ===== グループ組ごとのD&D（gheadをつかんで並び替え） =====
+  document.querySelectorAll('#gg .gc').forEach(card=>{
+    const gi=+card.querySelector('.gbdy').dataset.gi;
+    const head=card.querySelector('.ghead');
+    head.style.cursor='grab';
+    head.setAttribute('draggable','true');
+    head.addEventListener('dragstart',e=>{
+      srcGrp={gi};
+      e.dataTransfer.effectAllowed='move';
+      setTimeout(()=>card.style.opacity='0.4',0);
+      e.stopPropagation(); // メンバーD&Dと干渉させない
+    });
+    head.addEventListener('dragend',()=>{
+      card.style.opacity='';
+      document.querySelectorAll('#gg .gc.grp-over').forEach(x=>x.classList.remove('grp-over'));
+    });
+    card.addEventListener('dragover',e=>{
+      if(!srcGrp)return;
+      e.preventDefault();
+      card.classList.add('grp-over');
+    });
+    card.addEventListener('dragleave',e=>{
+      if(!card.contains(e.relatedTarget))card.classList.remove('grp-over');
+    });
+    card.addEventListener('drop',e=>{
+      card.classList.remove('grp-over');
+      if(!srcGrp||srcGrp.gi===gi)return;
+      e.preventDefault();e.stopPropagation();
+      // 組ごと入れ替え
+      const tmp=GR[srcGrp.gi];
+      GR[srcGrp.gi]=GR[gi];
+      GR[gi]=tmp;
+      srcGrp=null;
+      renderResult(0,_lastHasPast);
     });
   });
 }
