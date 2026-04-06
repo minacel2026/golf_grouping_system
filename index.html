@@ -151,6 +151,11 @@ input[type=range]{width:100%;accent-color:var(--g2)}
 .mr[draggable]:active{cursor:grabbing}
 .mr.dg-ing{opacity:.3;background:#e0e0e0!important}
 .gbdy.dg-over{background:var(--g3);outline:2px dashed var(--g2);border-radius:4px}
+.pool-panel{background:#fff;border:2px dashed #bbb;border-radius:8px;padding:10px 12px;margin-top:12px}
+.pool-panel.dg-over{background:var(--g3);border-color:var(--g2)}
+.mr-pool{display:flex;align-items:center;gap:6px;padding:4px 6px;background:#f5f5f5;border-radius:5px;margin:3px 0;cursor:grab}
+.mr-pool:active{cursor:grabbing}
+.mr-pool.dg-ing{opacity:.3}
 </style>
 </head>
 <body>
@@ -430,6 +435,7 @@ input[type=range]{width:100%;accent-color:var(--g2)}
   <div class="gg" id="gg">
     <div class="card" style="text-align:center;color:#999;padding:32px;grid-column:1/-1">「組み合わせを生成する」ボタンを押してください</div>
   </div>
+  <div class="pool-panel" id="pool-panel" style="display:none"></div>
 </div>
 
 <!-- ===== 過去フォルダ ===== -->
@@ -2086,12 +2092,58 @@ function renderResult(score,hasPast){
   }).join('');
   if(warns.length){wbox.style.display='block';wbox.innerHTML='⚠ '+warns.join(' ／ ');}
   else wbox.style.display='none';
-  initDrag();
+  // 未配置パネル（呼び出し後の追加・修正参加者）
+  const inGR=new Set(GR.flat().map(p=>norm(p.name)));
+  const pool=P.filter(p=>p.attend&&!inGR.has(norm(p.name)));
+  const poolEl=document.getElementById('pool-panel');
+  if(GR.length&&pool.length){
+    poolEl.style.display='block';
+    poolEl.innerHTML='<div style="font-size:12px;font-weight:bold;color:#555;margin-bottom:6px">📋 未配置の参加者（'+pool.length+'名）― ドラッグして組に追加できます</div>'
+      +pool.map((p,i)=>{
+        const f=isF(p.name);
+        return`<div class="mr-pool${f?' fm':''}" draggable="true" data-pool="${i}" style="pointer-events:auto">
+          <span style="font-size:12px;pointer-events:none">${p.name}${f?'<span class="bdg f" style="font-size:9px">★</span>':''}</span>
+          <span style="font-size:11px;color:#888;pointer-events:none">${p.company}</span>
+          <span style="font-size:11px;color:#aaa;margin-left:auto;pointer-events:none">${p.score&&p.score!==100?p.score:p.isInit?'初':''}</span>
+        </div>`;
+      }).join('');
+  } else {
+    poolEl.style.display='none';
+  }
+  initDrag(pool);
 }
 
-function initDrag(){
-  let src=null;   // メンバードラッグ用 {gi, pi}
+function initDrag(pool){
+  pool=pool||[];
+  let src=null;   // メンバードラッグ用 {gi, pi} / poolからはgi=-1
   let srcGrp=null; // グループドラッグ用 {gi}
+
+  // ===== 未配置パネルのD&D =====
+  document.querySelectorAll('.mr-pool[draggable]').forEach(el=>{
+    el.addEventListener('dragstart',e=>{
+      src={gi:-1, pi:+el.dataset.pool};
+      setTimeout(()=>el.classList.add('dg-ing'),0);
+      e.dataTransfer.effectAllowed='move';
+    });
+    el.addEventListener('dragend',()=>{
+      document.querySelectorAll('.mr-pool.dg-ing').forEach(x=>x.classList.remove('dg-ing'));
+      document.querySelectorAll('.gbdy.dg-over').forEach(x=>x.classList.remove('dg-over'));
+    });
+  });
+  // pool-panelへの戻しドロップ（グループメンバー→未配置に戻す）
+  const poolPanel=document.getElementById('pool-panel');
+  if(poolPanel){
+    poolPanel.addEventListener('dragover',e=>{e.preventDefault();poolPanel.classList.add('dg-over');});
+    poolPanel.addEventListener('dragleave',e=>{if(!poolPanel.contains(e.relatedTarget))poolPanel.classList.remove('dg-over');});
+    poolPanel.addEventListener('drop',e=>{
+      e.preventDefault();poolPanel.classList.remove('dg-over');
+      if(!src||src.gi<0){src=null;return;}
+      // グループからメンバーを取り出してpoolに戻す（GRから削除）
+      GR[src.gi].splice(src.pi,1);
+      src=null;
+      renderResult(0,_lastHasPast);
+    });
+  }
 
   // ===== メンバー行のD&D =====
   document.querySelectorAll('#gg .mr[draggable]').forEach(el=>{
@@ -2110,7 +2162,17 @@ function initDrag(){
       if(!src)return;
       const tgi=+el.dataset.gi, tpi=+el.dataset.pi;
       if(src.gi===tgi&&src.pi===tpi){src=null;return;}
-      if(GR[tgi].length<4){
+      if(src.gi===-1){
+        // poolからグループへ
+        const p=pool[src.pi];
+        if(!p){src=null;return;}
+        if(GR[tgi].length<4){
+          GR[tgi].splice(tpi,0,p);
+        } else {
+          // 4人なら入れ替え（外れた人はpoolに戻る=GRから削除）
+          GR[tgi][tpi]=p;
+        }
+      } else if(GR[tgi].length<4){
         const p=GR[src.gi].splice(src.pi,1)[0];
         GR[tgi].splice(tpi,0,p);
       } else {
@@ -2130,11 +2192,16 @@ function initDrag(){
       if(!src)return;
       const tgi=+body.dataset.gi;
       if(src.gi===tgi){src=null;return;}
-      if(GR[tgi].length<4){
+      if(src.gi===-1){
+        // poolからgbdyへ
+        const p=pool[src.pi];
+        if(p&&GR[tgi].length<4){GR[tgi].push(p);src=null;renderResult(0,_lastHasPast);return;}
+      } else if(GR[tgi].length<4){
         const p=GR[src.gi].splice(src.pi,1)[0];
         GR[tgi].push(p);
         src=null;
         renderResult(0,_lastHasPast);
+        return;
       }
       src=null;
     });
