@@ -372,13 +372,58 @@ input[type=range]{width:100%;accent-color:var(--g2)}
         <option value="4">4</option><option value="5">5</option><option value="6">6</option>
         <option value="7">7</option><option value="8">8</option><option value="9">9</option>
         <option value="10">10</option><option value="11">11</option><option value="12">12</option>
-        <option value="13">13</option><option value="14">14</option><option value="15" selected>15</option>
+        <option value="13">13</option><option value="14">14</option><option value="15">15</option>
+        <option value="16">16</option><option value="17">17</option><option value="18">18</option>
+        <option value="19">19</option><option value="20" selected>20</option>
       </select>
     </label>
+    <span id="ngHint" style="font-size:11px;color:var(--or);white-space:nowrap"></span>
     <button class="btn" onclick="expCSV()">📥 CSV出力</button>
     <button class="btn" onclick="openXLSXEdit()" style="background:#217346;color:#fff">📊 Excel出力</button>
     <button class="btn p" onclick="saveRes()">💾 この結果を過去データに保存</button>
     <span id="ginfo" style="font-size:11px;color:#666"></span>
+  </div>
+  <div id="gcond-panel" style="background:#fff;border:1px solid var(--bd);border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:12px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <b style="font-size:13px">⚙️ 条件設定</b>
+      <span style="font-size:11px;color:#888">生成前に設定してください</span>
+      <label style="display:flex;align-items:center;gap:4px;margin-left:auto;font-size:11px;color:#666">
+        ★の呼び方:
+        <input type="text" id="gcMarkLabel" value="女性" style="width:60px;padding:2px 6px;font-size:11px;border:1px solid var(--bd);border-radius:4px" oninput="GCOND.markLabel=this.value">
+      </label>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px">
+      <label style="display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;cursor:pointer;background:#f9f9f9">
+        <input type="checkbox" id="gcAvoidSameCo" checked onchange="GCOND.avoidSameCo=this.checked;if(this.checked)document.getElementById('gcPreferSameCo').checked=GCOND.preferSameCo=false" style="accent-color:var(--g2)">
+        <span>同会社を同組にしない</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;cursor:pointer;background:#f9f9f9">
+        <input type="checkbox" id="gcPreferSameCo" onchange="GCOND.preferSameCo=this.checked;if(this.checked)document.getElementById('gcAvoidSameCo').checked=GCOND.avoidSameCo=false" style="accent-color:var(--or)">
+        <span>同会社を同組にする<span style="font-size:10px;color:#888">（接待等）</span></span>
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;cursor:pointer;background:#f9f9f9">
+        <input type="checkbox" id="gcAvoidMark" checked onchange="GCOND.avoidMark=this.checked" style="accent-color:var(--g2)">
+        <span id="gcMarkLabelAvoid">★(女性)が2人以上同組にならない</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;cursor:pointer;background:#f9f9f9">
+        <input type="checkbox" id="gcSpreadMark" onchange="GCOND.spreadMark=this.checked" style="accent-color:var(--g2)">
+        <span id="gcMarkLabelSpread">★(女性)を各組に1人ずつ入れる</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;cursor:pointer;background:#f9f9f9">
+        <input type="checkbox" id="gcAvoidInit" checked onchange="GCOND.avoidInit=this.checked" style="accent-color:var(--g2)">
+        <span>初参加者を分散させる</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;cursor:pointer;background:#f9f9f9">
+        <input type="checkbox" id="gcAvoidPast" checked onchange="GCOND.avoidPast=this.checked" style="accent-color:var(--g2)">
+        <span>過去ペアを回避する</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;cursor:pointer;background:#f9f9f9">
+        <input type="checkbox" id="gcSpreadTop" onchange="GCOND.spreadTop=this.checked" style="accent-color:var(--g2)">
+        <span>上位者を分散させる（上位
+          <input type="number" id="gcTopN" value="8" min="2" max="20" style="width:40px;padding:1px 4px;font-size:11px;border:1px solid var(--bd);border-radius:3px" onclick="event.stopPropagation()" oninput="GCOND.topN=+this.value">
+        人）</span>
+      </label>
+    </div>
   </div>
   <div class="warnb" id="wbox"></div>
   <div class="pastb" id="pib"></div>
@@ -718,6 +763,19 @@ let fgid=3;
 let GR = [];
 let _lastHasPast = false; // ドラッグ後の再描画用
 
+// 組み合わせ条件設定
+let GCOND = {
+  avoidSameCo: true,    // 同会社を同組にしない
+  preferSameCo: false,  // 同会社を同組にする（接待等）
+  avoidMark: true,      // ★が2人以上同組にならない
+  spreadMark: false,    // ★を各組に1人ずつ入れる
+  avoidInit: true,      // 初参加者を分散させる
+  avoidPast: true,      // 過去ペアを回避する
+  spreadTop: false,     // 上位者を分散させる
+  topN: 8,              // 上位何人を分散させるか
+  markLabel: '女性',    // ★の呼び方
+};
+
 // Excel出力設定（編集可能）
 let XLSX_CFG = {
   title: '第21回 2026.4.12',
@@ -885,9 +943,34 @@ function ST(t,el){
   if(t==='send'){updateCoFilter();renderSend();}
   if(t==='master'){updateCoFilterM();renderM();}
   if(t==='summary')renderSum();
+  if(t==='result')updateNgSel();
   if(t==='fixed')renderFxList2();
   if(t==='folders')renderFolders();
   if(t==='notice')renderNotice();
+}
+
+// =============================================
+// === 組数セレクト更新 ===
+// =============================================
+function updateNgSel(){
+  const ac=P.filter(p=>p.attend).length;
+  const minGrp=ac>0?Math.ceil(ac/4):1;
+  const sel=document.getElementById('ngSel');
+  if(!sel)return;
+  // 最低組数未満のoptionを無効化
+  Array.from(sel.options).forEach(opt=>{
+    if(opt.value==='auto'){opt.disabled=false;return;}
+    const v=parseInt(opt.value);
+    opt.disabled=(v<minGrp);
+    opt.style.color=v<minGrp?'#ccc':'';
+  });
+  // 現在の選択が無効なら最低組数にリセット
+  if(sel.value!=='auto'&&parseInt(sel.value)<minGrp){
+    sel.value=minGrp<=20?String(minGrp):'auto';
+  }
+  // ヒントを表示
+  const hint=document.getElementById('ngHint');
+  if(hint)hint.textContent=ac>0?`参加${ac}人 → 最低${minGrp}組必要`:'';
 }
 
 // =============================================
@@ -1772,6 +1855,13 @@ function recalcPH(){
 function generate(){
   const ac=P.filter(p=>p.attend);
   if(ac.length<4){alert('参加者が4人未満です');return;}
+  updateNgSel(); // 組数セレクトを最新状態に
+  const minGrpNeeded=Math.ceil(ac.length/4);
+  const ngSelVal=document.getElementById('ngSel').value;
+  if(ngSelVal!=='auto'&&parseInt(ngSelVal)<minGrpNeeded){
+    alert(`参加者${ac.length}人には最低${minGrpNeeded}組必要です。
+組数を${minGrpNeeded}組以上に変更してください。`);return;
+  }
   const ngSel=document.getElementById('ngSel').value;
   const hasPast=Object.keys(PH).length>0;
   const doBalance=!!(document.getElementById('chkBalance')?.checked);
@@ -1779,6 +1869,11 @@ function generate(){
   const getS=p=>p.isInit?100:(p.score&&p.score>60)?p.score:100;
   const gAvg=g=>g.length?g.reduce((s,p)=>s+getS(p),0)/g.length:100;
   const isLEEGrp=g=>g.some(p=>p.company.includes('LEE')||p.company.includes('ＬＥＥ'));
+  const isTopN=new Set(
+    GCOND.spreadTop
+      ? [...P].filter(p=>p.attend&&p.score&&p.score>60).sort((a,b)=>a.score-b.score).slice(0,GCOND.topN).map(p=>p.id)
+      : []
+  );
   const fixedIds=new Set(FX.flatMap(fx=>fx.ids));
 
   // =============================================
@@ -1838,7 +1933,7 @@ function generate(){
   const fixedCount=grps.length;
   let ngExtra;
   if(ngSel==='auto'){
-    ngExtra=Math.min(15-fixedCount,Math.max(0,Math.ceil(remaining/4)));
+    ngExtra=Math.min(20-fixedCount,Math.max(0,Math.ceil(remaining/4)));
   }else{
     ngExtra=Math.max(0,parseInt(ngSel)-fixedCount);
   }
@@ -1866,15 +1961,25 @@ function generate(){
   function grpPen(g,globalAvg){
     let p=0;
     for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++){
-      if(g[i].company===g[j].company)p+=100000;
-      p+=getPP(g[i].name,g[j].name);
+      // 同会社ペナルティ
+      if(GCOND.avoidSameCo&&g[i].company===g[j].company)p+=100000;
+      // 同会社優遇（接待等）：別会社にペナルティ
+      if(GCOND.preferSameCo&&g[i].company!==g[j].company)p+=80000;
+      // 過去ペア回避
+      if(GCOND.avoidPast)p+=getPP(g[i].name,g[j].name);
     }
+    // ★条件
     const fc=g.filter(x=>isF(x.name)).length;
-    if(fc>=2&&!isLEEGrp(g))p+=50000*(fc-1);
-    // 初参加者が2人以上同じ組にいる場合ペナルティ（均等に分散させる）
+    if(GCOND.avoidMark&&fc>=2&&!isLEEGrp(g))p+=50000*(fc-1);
+    if(GCOND.spreadMark&&fc===0)p+=20000; // ★がいない組にペナルティ
+    if(GCOND.spreadMark&&fc>=2)p+=40000*(fc-1);
+    // 初参加者分散
     const ic=g.filter(x=>x.isInit).length;
-    if(ic>=2)p+=30000*(ic-1);
-    if(doBalance){const dev=gAvg(g)-globalAvg;p+=dev*dev*500;} // スコア均等化を強く
+    if(GCOND.avoidInit&&ic>=2)p+=30000*(ic-1);
+    // 上位者分散
+    const tc=g.filter(x=>isTopN.has(x.id)).length;
+    if(GCOND.spreadTop&&tc>=2)p+=60000*(tc-1);
+    if(doBalance){const dev=gAvg(g)-globalAvg;p+=dev*dev*500;}
     return p;
   }
 
@@ -1933,8 +2038,8 @@ function generate(){
   renderResult(0,hasPast);
   let info=GR.length+'組生成（'+pass+'パス）';
   if(doBalance&&freeAvgs.length)info+=' 📊組平均: 最大'+maxA+'／最小'+minA+'／差'+(maxA-minA)+'点';
-  if(coWarn===0)info+=' ✅同会社なし';else info+=' ⚠️同会社'+coWarn+'組';
-  if(femWarn===0)info+=' ✅女性OK';
+  if(GCOND.avoidSameCo){if(coWarn===0)info+=' ✅同会社なし';else info+=' ⚠️同会社'+coWarn+'組';}
+  if(GCOND.avoidMark){const fl=GCOND.markLabel||'女性';if(femWarn===0)info+=` ✅${fl}OK`;else info+=` ⚠️${fl}重複${femWarn}組`;}
   if(hasPast)info+=' ／ 過去ペア反映';
   document.getElementById('ginfo').textContent=info;
 }
@@ -1951,10 +2056,11 @@ function renderResult(score,hasPast){
   document.getElementById('gg').innerHTML=GR.map((g,i)=>{
     const fc=g.filter(p=>isF(p.name)).length;
     const isLEE=g.some(p=>p.company.includes('LEE')||p.company.includes('ＬＥＥ'));
-    const hw=fc>=2&&!isLEE;
+    const hw=GCOND.avoidMark&&fc>=2&&!isLEE;
     const cos=g.map(p=>p.company);
-    const sameCo=cos.length!==new Set(cos).size;
-    if(hw)warns.push(`第${i+1}組に女性${fc}人`);
+    const sameCo=GCOND.avoidSameCo&&cos.length!==new Set(cos).size;
+    const fl=GCOND.markLabel||'女性';
+    if(hw)warns.push(`第${i+1}組に${fl}${fc}人`);
     if(sameCo)warns.push(`第${i+1}組に同会社重複`);
     const avg=g.length?Math.round(g.reduce((a,p)=>a+p.score,0)/g.length):0;
     const mems=g.map((p,mi)=>{
@@ -1968,7 +2074,7 @@ function renderResult(score,hasPast){
     }).join('');
     return`<div class="gc${hw||sameCo?' wc':''}">
       <div class="ghead"><span>第${i+1}組</span>
-        ${hw?'<span class="bdg w">⚠女性'+fc+'人</span>':''}
+        ${hw?'<span class="bdg w">⚠'+fl+fc+'人</span>':''}
         ${sameCo?'<span class="bdg w">⚠同社</span>':''}
         </div>
       <div class="gbdy" data-gi="${i}">${mems}</div>
@@ -2262,7 +2368,7 @@ function expXLSX(){
       sheetXml=replaceHdrCell(sheetXml,'A10', cfg.note||'', ' s="19"');
 
       GR.forEach((grp,gi)=>{
-        if(gi>=16)return;
+        if(gi>=20)return;
         const r1=14+gi*2, r2=r1+1;
         const gcfg=(cfg.groups&&cfg.groups[gi])||{course:'',time:''};
         const mb=i=>grp[i]||{name:'',company:'',score:null,isInit:false};
@@ -2497,13 +2603,36 @@ function showFileDetail(fid,idx){
       loadNoticeFromFolder(fid,idx);
     }
   }else{
-    // 組み合わせ表（氏名のみ or 氏名+会社のどちらでも対応）
+    // 組み合わせ表
     const grpLines=fi.data.slice(0,5).map((g,i)=>{
       const members=g.map(m=>typeof m==='object'?m.name+'（'+m.company+'）':m);
       return '第'+(i+1)+'組: '+members.join('・');
     });
-    alert('🏌️ '+fi.label+'\n\n'+grpLines.join('\n')+(fi.data.length>5?'\n... 他'+(fi.data.length-5)+'組':''));
+    const preview='🏌️ '+fi.label+'\n\n'+grpLines.join('\n')+(fi.data.length>5?'\n... 他'+(fi.data.length-5)+'組':'');
+    if(confirm(preview+'\n\nこの組み合わせを組み合わせ画面に呼び出しますか？')){
+      loadGrpToResult(fid,idx);
+    }
   }
+}
+function loadGrpToResult(fid,idx){
+  const folder=FOLDERS.find(f=>f.id===fid);
+  if(!folder||!folder.files[idx])return;
+  const fi=folder.files[idx];
+  // 保存データ（{name,company}形式）をGRに復元
+  // 参加者マスタPからスコア等を補完
+  GR=fi.data.map(g=>g.map(m=>{
+    const name=typeof m==='object'?m.name:m;
+    const company=typeof m==='object'?m.company:'';
+    // Pから一致する参加者を検索してスコア等を補完
+    const p=P.find(x=>norm(x.name)===norm(name));
+    return p?{...p}:{name,company,score:null,isInit:false,attend:1,id:-1};
+  }));
+  // 組み合わせタブに切り替えて表示
+  const tab=document.querySelector('[onclick*="result"]');
+  if(tab)ST('result',tab);
+  renderResult(0,Object.keys(PH).length>0);
+  document.getElementById('ginfo').textContent=
+    '📂 「'+fi.label+'」を呼び出しました（'+GR.length+'組）';
 }
 function openNewFolder(){
   document.getElementById('foldNm').value='';
