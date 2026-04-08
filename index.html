@@ -222,7 +222,7 @@ input[type=range]{width:100%;accent-color:var(--g2)}
   </div>
 
   <div class="card">
-    <div style="font-weight:bold;font-size:13px;margin-bottom:8px">🏆 歴代優勝者</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><b style="font-size:13px">🏆 歴代優勝者</b><button class="btn g sm" onclick="openAddWinner()" style="padding:2px 8px;font-size:11px">＋ 追加</button></div>
     <div class="tw" style="max-height:200px;overflow-y:auto">
       <table><thead><tr><th class="nd">回</th><th class="nd">優勝者</th><th class="nd">グロス</th><th class="nd">会社</th><th class="nd">日付</th><th class="nd">場所</th><th class="nd">参加</th></tr></thead>
       <tbody id="winners-body"></tbody></table>
@@ -321,6 +321,7 @@ input[type=range]{width:100%;accent-color:var(--g2)}
   <div class="info">👥 参加者管理から自動生成されます。会社名・参加状況が確認できます。</div>
   <div class="tb">
     <button class="btn g" onclick="renderSum()">🔄 集計を更新</button>
+    <button class="btn" style="background:#f57f17;color:#fff" onclick="saveRankingToFolder()">🏆 順位表をフォルダに保存</button>
     <button class="btn" onclick="expSumCSV()">📥 CSV出力</button>
     <input type="text" id="sumLabel" placeholder="保存名（例: 第21回 参加集計）" style="width:200px;padding:4px 8px;font-size:11px;border:1px solid var(--bd);border-radius:6px">
     <select id="sumFolSel" style="padding:4px 6px;font-size:11px;border:1px solid var(--bd);border-radius:6px">
@@ -366,6 +367,7 @@ input[type=range]{width:100%;accent-color:var(--g2)}
   <div class="tb">
     <button class="btn g" style="font-size:13px;padding:7px 18px" onclick="generate()">▶ 組み合わせを生成する</button>
     <button class="btn b" onclick="generate()">🔄 再生成</button>
+    <button class="btn" onclick="addGrp()" id="addGrpBtn" style="display:none">＋ 組を追加</button>
     <label style="display:flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid var(--bd);border-radius:6px;cursor:pointer;background:#fff;font-size:12px;white-space:nowrap">
       <input type="checkbox" id="chkBalance" style="accent-color:var(--g2);width:14px;height:14px;cursor:pointer">
       📊 スコア均等化
@@ -460,6 +462,37 @@ input[type=range]{width:100%;accent-color:var(--g2)}
     <div style="margin-top:8px">
       <b style="font-size:12px">🔥 同組回数ランキング（上位20ペア）</b>
       <div id="prank" style="margin-top:6px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル: スコア一括入力 -->
+<div class="mbg" id="scoreInputM" style="display:none">
+  <div class="modal" style="width:480px;max-height:85vh;display:flex;flex-direction:column">
+    <h3>🏆 スコア一括入力</h3>
+    <div style="font-size:11px;color:#888;margin-bottom:10px">参加者のスコアを入力して「保存」を押してください</div>
+    <div id="scoreInputList" style="overflow-y:auto;flex:1;margin-bottom:12px"></div>
+    <div class="mbtns">
+      <button class="btn" onclick="cm('scoreInputM')">キャンセル</button>
+      <button class="btn g" onclick="saveScoreInput()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル: 歴代優勝者追加 -->
+<div class="mbg" id="addWinM" style="display:none">
+  <div class="modal" style="width:420px">
+    <h3>🏆 歴代優勝者を追加</h3>
+    <div class="frow"><label>回（例: 第21回）</label><input type="text" id="wRound" placeholder="第21回"></div>
+    <div class="frow"><label>優勝者氏名</label><input type="text" id="wName" placeholder="氏名"></div>
+    <div class="frow"><label>グロススコア</label><input type="number" id="wScore" min="60" max="200" value="90"></div>
+    <div class="frow"><label>会社名</label><input type="text" id="wCompany" placeholder="会社名"></div>
+    <div class="frow"><label>開催日（例: 2026.4.12）</label><input type="text" id="wDate" placeholder="2026.4.12"></div>
+    <div class="frow"><label>会場名</label><input type="text" id="wVenue" placeholder="会場名"></div>
+    <div class="frow"><label>参加人数</label><input type="number" id="wCount" min="1" value=""></div>
+    <div class="mbtns">
+      <button class="btn" onclick="cm('addWinM')">キャンセル</button>
+      <button class="btn g" onclick="saveWinner()">💾 保存</button>
     </div>
   </div>
 </div>
@@ -840,7 +873,7 @@ let FOLDERS = [
 let currentFolderId = null;
 
 // 歴代優勝者
-const WINNERS = [
+let WINNERS = [
   {round:"第-1回",name:"山内 卓三",score:95,company:"MJウッド",date:"2014.5.25",venue:"ヌーヴェルゴルフ俱楽部",count:38},
   {round:"第0回",name:"川平 信二",score:111,company:"川平工務店",date:"2015.6.14",venue:"東京国際空港ゴルフ倶楽部",count:32},
   {round:"第2回",name:"久保田 雅彦",score:96,company:"テクネット",date:"2015.11.8",venue:"ヌーヴェルゴルフ俱楽部",count:31},
@@ -893,7 +926,7 @@ let _sb=null;
 try{_sb=window.supabase.createClient(SB_URL,SB_KEY);}catch(e){console.warn('SB',e);}
 function setSyncSt(msg,color){const el=document.getElementById('sync-st');if(el){el.textContent=msg;el.style.background=color||'rgba(255,255,255,.2)';}}
 async function sv(){
-  const data={P,CO,FX,PH,SESSIONS,FOLDERS,PM,fgid,coid,nid};
+  const data={P,CO,FX,PH,SESSIONS,FOLDERS,PM,fgid,coid,nid,WINNERS,GR:GR.map(g=>g.map(p=>({name:p.name,company:p.company,score:p.score,isInit:p.isInit,id:p.id})))};
   try{localStorage.setItem('golfDataV2',JSON.stringify(data));}catch(e){}
   if(!_sb){setSyncSt('💾 ローカル保存','rgba(230,81,0,.6)');return;}
   try{
@@ -927,12 +960,19 @@ async function ld(){
     if(data.P&&data.P.length){P=data.P;nid=Math.max(...P.map(x=>x.id))+1;}
     if(data.CO&&data.CO.length){CO=data.CO;coid=Math.max(...CO.map(x=>x.id))+1;}
     if(data.FX)FX=data.FX;if(data.fgid)fgid=data.fgid;if(data.coid)coid=data.coid;if(data.nid)nid=data.nid;
-    if(data.PH)PH=data.PH;if(data.SESSIONS)SESSIONS=data.SESSIONS;if(data.FOLDERS)FOLDERS=data.FOLDERS;
+    if(data.PH)PH=data.PH;if(data.SESSIONS)SESSIONS=data.SESSIONS;if(data.FOLDERS)FOLDERS=data.FOLDERS;if(data.WINNERS&&data.WINNERS.length)WINNERS=data.WINNERS;
+    if(data.GR&&data.GR.length){
+      GR=data.GR.map(g=>g.map(m=>{
+        const p=P.find(x=>x.id===m.id);
+        return p?{...p}:{...m};
+      }));
+    }
     if(data.PM){PM=data.PM;const ps=document.getElementById('psl');if(ps)ps.value=PM;const pd=document.getElementById('pdis');if(pd)pd.textContent=PM;}
   }catch(e){console.warn('data apply',e);}
   if(_sb){_sb.channel('golf-rt').on('postgres_changes',{event:'UPDATE',schema:'public',table:'golf_data'},payload=>{
     const d=payload.new?.value;if(!d)return;setSyncSt('🔄 更新受信...','rgba(21,101,192,.6)');
-    try{if(d.P){P=d.P;nid=Math.max(...P.map(x=>x.id))+1;}if(d.CO)CO=d.CO;if(d.FX)FX=d.FX;if(d.PH)PH=d.PH;if(d.SESSIONS)SESSIONS=d.SESSIONS;if(d.FOLDERS)FOLDERS=d.FOLDERS;}catch(e){}
+    try{if(d.P){P=d.P;nid=Math.max(...P.map(x=>x.id))+1;}if(d.CO)CO=d.CO;if(d.FX)FX=d.FX;if(d.PH)PH=d.PH;if(d.SESSIONS)SESSIONS=d.SESSIONS;if(d.FOLDERS)FOLDERS=d.FOLDERS;if(d.WINNERS&&d.WINNERS.length)WINNERS=d.WINNERS;
+    if(d.GR&&d.GR.length)GR=d.GR.map(g=>g.map(m=>{const p=P.find(x=>x.id===m.id);return p?{...p}:{...m};}));}catch(e){}
     const t=document.querySelector('.tab.on');if(t)t.click();setSyncSt('✅ 同期済み','rgba(46,125,50,.7)');
   }).subscribe();}
 }
@@ -982,6 +1022,92 @@ function updateNgSel(){
 // =============================================
 // === ダッシュボード ===
 // =============================================
+function openScoreInput(){
+  const ac=P.filter(p=>p.attend);
+  if(!ac.length){alert('参加者を登録してください');return;}
+  const list=document.getElementById('scoreInputList');
+  list.innerHTML='<table style="width:100%;border-collapse:collapse">'+
+    '<thead><tr style="background:#f5f5f5"><th style="padding:6px 8px;text-align:left;font-size:12px">氏名</th>'+
+    '<th style="padding:6px 8px;text-align:left;font-size:11px;color:#888">会社</th>'+
+    '<th style="padding:6px 8px;font-size:12px;width:80px">スコア</th></tr></thead><tbody>'+
+    ac.map(p=>{
+      const disabled=p.isInit?'disabled':'';
+      const bg=p.isInit?'background:#e8f5e9;':'';
+      const border=p.isInit?'border:1px solid var(--g2)':!p.score?'border:1px solid #ffcc02':'border:1px solid var(--bd)';
+      return '<tr style="border-bottom:1px solid #f0f0f0">'+
+        '<td style="padding:5px 8px;font-size:12px">'+p.name+(p.isInit?'<span style="font-size:9px;color:var(--g2);margin-left:4px">初</span>':'')+'</td>'+
+        '<td style="padding:5px 8px;font-size:11px;color:#888">'+p.company+'</td>'+
+        '<td style="padding:4px 8px"><input type="number" id="sc_'+p.id+'" value="'+(p.isInit?100:p.score||'')+'" min="60" max="250" '+disabled+
+        ' style="width:70px;padding:3px 6px;font-size:14px;'+border+';border-radius:4px;text-align:center;'+bg+'"></td></tr>';
+    }).join('')+'</tbody></table>';
+  document.getElementById('scoreInputM').style.display='flex';
+  const first=ac.find(p=>!p.isInit&&!p.score);
+  if(first)setTimeout(()=>{const el=document.getElementById('sc_'+first.id);if(el)el.focus();},100);
+}
+function saveScoreInput(){
+  const ac=P.filter(p=>p.attend);
+  let updated=0;
+  ac.forEach(p=>{
+    if(p.isInit){p.score=100;return;}
+    const el=document.getElementById('sc_'+p.id);
+    if(!el)return;
+    const v=parseInt(el.value);
+    if(v>=60&&v<=250){p.score=v;updated++;}
+  });
+  sv();cm('scoreInputM');renderDash();
+  alert(updated+'名のスコアを保存しました');
+}
+function openAddWinner(){
+  document.getElementById('wRound').value='';
+  document.getElementById('wName').value='';
+  document.getElementById('wScore').value=90;
+  document.getElementById('wCompany').value='';
+  document.getElementById('wDate').value='';
+  document.getElementById('wVenue').value='';
+  document.getElementById('wCount').value='';
+  document.getElementById('addWinM').style.display='flex';
+  setTimeout(()=>document.getElementById('wRound').focus(),50);
+}
+function saveWinner(){
+  const round=document.getElementById('wRound').value.trim();
+  const name=document.getElementById('wName').value.trim();
+  const score=parseInt(document.getElementById('wScore').value)||'';
+  if(!round||!name){alert('回と氏名は必須です');return;}
+  WINNERS.push({
+    round,name,score,
+    company:document.getElementById('wCompany').value.trim(),
+    date:document.getElementById('wDate').value.trim(),
+    venue:document.getElementById('wVenue').value.trim(),
+    count:parseInt(document.getElementById('wCount').value)||''
+  });
+  sv();cm('addWinM');renderDash();
+}
+function saveRankingToFolder(){
+  const ac=P.filter(p=>p.attend).sort((a,b)=>(a.no||9999)-(b.no||9999));
+  if(!ac.length){alert('参加者がいません');return;}
+  if(!FOLDERS.length){alert('先に「過去フォルダ」タブでフォルダを作成してください');return;}
+  const sortedF2=FOLDERS.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const fid_input=prompt('保存先フォルダを選択してください（番号を入力）:\n'+sortedF2.map((f,i)=>`${i+1}. ${f.name}`).join('\n'));
+  if(!fid_input)return;
+  const fidx=parseInt(fid_input)-1;
+  const sortedF=FOLDERS.sort((a,b)=>b.date.localeCompare(a.date));
+  if(fidx<0||fidx>=sortedF.length){alert('無効な番号です');return;}
+  const folder=sortedF[fidx];
+  const label=prompt('順位表の名前を入力してください','順位表');
+  if(!label)return;
+  const existing=folder.files.findIndex(f=>f.type==='ranking'&&f.label===label);
+  if(existing>=0){
+    if(!confirm('「'+label+'」はすでに保存されています。上書きしますか？'))return;
+    folder.files.splice(existing,1);
+  }
+  folder.files.push({
+    type:'ranking',
+    label,
+    data:ac.map(p=>({name:p.name,score:p.score&&p.score!==100?p.score:null,company:p.company})),
+    savedAt:new Date().toISOString()
+  });
+  sv();alert('「'+folder.name+'」に順位表を保存しました');
+}
 function renderDash(){
   const totalCo=CO.length;
   const sent=CO.filter(c=>c.status!=='未送信').length;
@@ -1006,23 +1132,23 @@ function renderDash(){
 
   // ステップ
   const steps=[
-    {icon:'📝',lbl:'案内文\n作成',done:true},
-    {icon:'📤',lbl:'案内送信',done:sent>=totalCo*0.8},
-    {icon:'✅',lbl:'回答\n回収',done:replied>=totalCo*0.7},
-    {icon:'👥',lbl:'参加者\n登録',done:ac.length>40},
-    {icon:'🏆',lbl:'スコア\n入力',done:withScore>ac.length*0.8},
-    {icon:'🏌️',lbl:'組み合わせ\n生成',done:false},
+    {icon:'📝',lbl:'案内文\n作成',done:true,tab:'notice'},
+    {icon:'📤',lbl:'案内送信',done:sent>=totalCo*0.8,tab:'send'},
+    {icon:'✅',lbl:'回答\n回収',done:replied>=totalCo*0.7,tab:'send'},
+    {icon:'👥',lbl:'参加者\n登録',done:ac.length>0,tab:'master'},
+    {icon:'🏆',lbl:'スコア\n入力',done:withScore>ac.length*0.8,tab:'score'},
+    {icon:'🏌️',lbl:'組み合わせ\n生成',done:GR.length>0,tab:'result'},
+    {icon:'🥇',lbl:'順位\n保存',done:FOLDERS.some(f=>f.files.some(x=>x.type==='ranking')),tab:'ranking'},
   ];
   const sb=document.getElementById('step-bar');
   sb.innerHTML=steps.map((s,i)=>`
     ${i>0?`<div class="step-line ${steps[i-1].done?'done':''}"></div>`:''}
-    <div class="step">
+    <div class="step" onclick="goStep('${s.tab}')" style="cursor:pointer">
       <div class="step-circle ${s.done?'done':i===steps.findIndex(x=>!x.done)?'active':''}">${s.icon}</div>
       <div class="step-lbl">${s.lbl}</div>
     </div>`).join('');
-
   const activeStep=steps.findIndex(s=>!s.done);
-  const labels=['案内文の作成','案内送信（全社へFAX/メール）','参加回答の回収','参加者の確定登録','スコアの入力','組み合わせの生成'];
+  const labels=['案内文の作成','案内送信（全社へFAX/メール）','参加回答の回収','参加者の確定登録','スコアの入力','組み合わせの生成','順位表の保存'];
   document.getElementById('step-detail').textContent=activeStep>=0?`次のステップ: ${labels[activeStep]}`:'✅ 全ステップ完了';
 
   // 注意点
@@ -1033,6 +1159,20 @@ function renderDash(){
   // 歴代優勝者
   document.getElementById('winners-body').innerHTML=[...WINNERS].reverse().slice(0,8).map(w=>`
     <tr><td>${w.round}</td><td><b>${w.name}</b></td><td>${w.score||''}</td><td style="font-size:11px;color:#666">${w.company}</td><td style="font-size:11px;color:#666">${w.date}</td><td style="font-size:11px;color:#777">${w.venue}</td><td>${w.count||''}</td></tr>`).join('');
+}
+
+// =============================================
+// === 工程アイコンのタブ移動 ===
+// =============================================
+function goStep(tab){
+  if(tab==='score'){openScoreInput();return;}
+  if(tab==='ranking'){saveRankingToFolder();return;}
+  // タブボタンを全検索してonclick文字列に tab名が含まれるものを探す
+  const btns=document.querySelectorAll('.tab');
+  for(let b of btns){
+    const oc=b.getAttribute('onclick')||'';
+    if(oc.includes("'"+tab+"'")){ST(tab,b);return;}
+  }
 }
 
 // =============================================
@@ -2052,6 +2192,8 @@ function generate(){
 
 function renderResult(score,hasPast){
   _lastHasPast=hasPast;
+  const addBtn=document.getElementById('addGrpBtn');
+  if(addBtn)addBtn.style.display=GR.length?'':'none';
   const warns=[];
   const _allp=P.filter(p=>p.attend&&p.score&&p.score>60);
   const totalAvg=_allp.length?Math.round(_allp.reduce((s,p)=>s+p.score,0)/_allp.length):100;
@@ -2083,7 +2225,7 @@ function renderResult(score,hasPast){
         ${hw?'<span class="bdg w">⚠'+fl+fc+'人</span>':''}
         ${sameCo?'<span class="bdg w">⚠同社</span>':''}
         </div>
-      <div class="gbdy" data-gi="${i}">${mems}</div>
+      <div class="gbdy" data-gi="${i}" style="min-height:40px">${mems||'<div style="color:#bbb;font-size:11px;text-align:center;padding:10px 0;pointer-events:none">ここにドロップして追加</div>'}</div>
       <div class="atg" style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:10px;color:#aaa">グループ平均スコア</span>
         <b id="gavg-${i}" style="font-size:13px;color:${avg?(Math.abs(avg-totalAvg)<=8?'var(--g2)':Math.abs(avg-totalAvg)<=15?'var(--or)':'#c62828'):'#ccc'}">${avg?avg:'—'}</b>
@@ -2243,6 +2385,14 @@ function initDrag(pool){
       renderResult(0,_lastHasPast);
     });
   });
+}
+function addGrp(){
+  if(!GR.length){alert('先に組み合わせを生成または呼び出してください');return;}
+  GR.push([]);
+  renderResult(0,_lastHasPast);
+  // 追加した組までスクロール
+  const cards=document.querySelectorAll('#gg .gc');
+  if(cards.length)cards[cards.length-1].scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function saveRes(){
   if(!GR.length){alert('先に組み合わせを生成してください');return;}
